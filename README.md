@@ -32,7 +32,7 @@ fun main() {
 }
 ```
 
-*All above where taken from `examples/` inside of [the repository](https://github.com/scOwez/jingo/tree/master/examples).*
+*All above where taken from the [`examples/` directory](https://github.com/scOwez/jingo/tree/master/examples) inside of [the repository](https://github.com/scOwez/jingo/).*
 
 ## File structure
 
