@@ -36,4 +36,5 @@ fun main() {
 
 ## File structure
 
-You will find .jno/.jino examples in the `examples/` directory, the cli in the `jingo/` directory and the core library for jingo in the `jingo-lib/` directory.
+
+In [the repository](https://github.com/scOwez/jingo/), you will find .jno/.jino examples inside of the `examples/` directory, the official CLI in the `jingo/` directory and the core library for Jingo in the `jingo-lib/` directory.
