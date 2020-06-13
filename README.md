@@ -34,7 +34,24 @@ fun main() {
 
 *All above where taken from the [`examples/` directory](https://github.com/scOwez/jingo/tree/master/examples) inside of [the repository](https://github.com/scOwez/jingo/).*
 
-## File structure
+## Running/Building
 
+First make sure you have Rust [installed](https://www.rust-lang.org/tools/install).
+
+To build/run:
+
+```bash
+cargo run --release # run it, binary is saved to `target/release/jingo`
+cargo build --release # build only, binary is saved to `target/release/jingo`
+```
+
+If you are looking to use **only** the compiler library, just add it to your project's `Cargo.toml`:
+
+```toml
+[dependencies]
+jingo-lib = "0.1"
+```
+
+## File structure
 
 In [the repository](https://github.com/scOwez/jingo/), you will find .jno/.jino examples inside of the `examples/` directory, the official CLI in the `jingo/` directory and the core library for Jingo in the `jingo-lib/` directory.
