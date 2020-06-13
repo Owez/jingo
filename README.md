@@ -1,5 +1,8 @@
 # Jingo
 
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FscOwez%2Fjingo%2Fbadge&style=for-the-badge)](https://actions-badge.atrox.dev/scOwez/jingo/goto)
+![License](https://img.shields.io/github/license/scOwez/jingo?style=for-the-badge)
+
 A lightweight, high-level language designed to be sleek and robust.
 
 ## Examples
