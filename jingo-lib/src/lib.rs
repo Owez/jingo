@@ -1,3 +1,5 @@
+//! The central library for Jingo, containing the core of the compiler.
+
 #[cfg(test)]
 mod tests {
     #[test]

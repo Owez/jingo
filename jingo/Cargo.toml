@@ -1,5 +1,6 @@
 [package]
 name = "jingo"
+description = "The official CLI for Jingo (code for the `./jingo [file]` program)."
 version = "0.1.0"
 authors = ["Owez <owez@scalist.net>"]
 edition = "2018"

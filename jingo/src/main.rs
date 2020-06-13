@@ -1,5 +1,5 @@
-//! The CLI for Jingo (code for the `./jingo [file]` program), if you are looking
-//! for the main documentation, [go here](https://github.com/scOwez/jingo).
+//! The official CLI for Jingo (code for the `./jingo [file]` program), if you
+//! are looking for the main documentation, [go here](https://github.com/scOwez/jingo).
 
 mod cli;
 mod log;
