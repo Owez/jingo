@@ -37,7 +37,7 @@ fn read_path(path: PathBuf, file_name: &str) -> String {
 
 fn main() {
     match parse_args() {
-        CLIResult::Error(e) => log::error(e),
+        CLIResult::Fatal(e) => log::fatal(e),
         CLIResult::Direct(code, _) => {
             log::info("Compiling direct code..".to_string())
 

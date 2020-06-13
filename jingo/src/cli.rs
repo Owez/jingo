@@ -15,9 +15,9 @@ pub enum CLIResult {
     /// an optional output `-o` file
     Direct(String, Option<PathBuf>),
 
-    /// An error occured. The attached [String] is user-friendly info regarding
+    /// A fatal error occured. The attached [String] is user-friendly info regarding
     /// what happened
-    Error(String),
+    Fatal(String),
 
     /// Showed help or version message and returned, no need for further parsing.
     Handled,
@@ -30,14 +30,14 @@ fn show_help(error: bool) -> CLIResult {
 Usage:
     ./jingo <file>
     ./jingo <file> (-o | --output) <output>
-    ./jingo (-i | --input) <code>
+    ./jingo (-d | --direct) <code>
     ./jingo -h | --help
     ./jingo -v | --version
 
 Options:
     -h --help       Show this screen.
     -v --version    Shows compiler version.
-    -i --input      Feed direct Zypo code into compiler.
+    -d --direct      Feed direct Zypo code into compiler.
     -o --output     Output path for binary.";
 
     if error {
@@ -57,7 +57,7 @@ fn show_version() -> CLIResult {
             log::info(format!("Jingo compiler is at version {}", version.bold()));
             CLIResult::Handled
         }
-        None => CLIResult::Error(format!(
+        None => CLIResult::Fatal(format!(
             "Could not fetch version, please ensure {} is set",
             "CARGO_PKG_VERSION".bold()
         )),
@@ -92,10 +92,20 @@ pub fn parse_args() -> CLIResult {
             direct_flag = true;
         } else if direct_flag {
             direct_flag = false;
-            direct_buf = argument;
+
+            if direct_buf.is_empty() {
+                direct_buf = argument;
+            } else {
+                return CLIResult::Fatal("Please only provide 1 direct argument".to_string());
+            }
         } else if output_flag {
             output_flag = false;
-            output_buf = argument;
+
+            if output_buf.is_empty() {
+                output_buf = argument;
+            } else {
+                return CLIResult::Fatal("Please only provide 1 output location".to_string());
+            }
         }
     }
 
@@ -110,10 +120,10 @@ pub fn parse_args() -> CLIResult {
     } else if !file_buf.is_empty() {
         CLIResult::File(PathBuf::from(file_buf), final_output)
     } else {
-        CLIResult::Error(format!(
+        CLIResult::Fatal(format!(
             "Please provide a {} or a {}!",
             "<file>".bold(),
-            "(-i | --input) <code>".bold()
+            "(-d | --direct) <code>".bold()
         ))
     }
 }
