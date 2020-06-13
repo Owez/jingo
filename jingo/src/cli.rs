@@ -23,8 +23,8 @@ pub enum CLIResult {
     Handled,
 }
 
-/// Prints help info
-fn show_help() -> CLIResult {
+/// Prints help info, `error` is for if it should display to stderr (true) or just stdout (false).
+fn show_help(error: bool) -> CLIResult {
     let help_msg = "A lightweight, high-level language designed to be sleek and robust.
 
 Usage:
@@ -40,7 +40,11 @@ Options:
     -i --input      Feed direct Zypo code into compiler.
     -o --output     Output path for binary.";
 
-    println!("{}", help_msg);
+    if error {
+        eprintln!("{}", help_msg);
+    } else {
+        println!("{}", help_msg);
+    }
 
     CLIResult::Handled
 }
@@ -63,7 +67,7 @@ fn show_version() -> CLIResult {
 /// Parses arguments given in by user and returns a [CLIResult]
 pub fn parse_args() -> CLIResult {
     if env::args().len() == 1 {
-        return show_help();
+        return show_help(true);
     }
 
     let mut direct_buf = String::new(); // buffer for direct
@@ -79,7 +83,7 @@ pub fn parse_args() -> CLIResult {
         } else if ind == 1 && !argument.starts_with('-') {
             file_buf = argument;
         } else if &argument == "-h" || &argument == "--help" {
-            return show_help();
+            return show_help(false);
         } else if &argument == "-v" || &argument == "--version" {
             return show_version();
         } else if &argument == "-o" || &argument == "--output" {
