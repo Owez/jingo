@@ -1,6 +1,6 @@
 # Jingo
 
-Jingo is a lightweight, high-level language designed to be sleek and robust.
+A lightweight, high-level language designed to be sleek and robust.
 
 ## Examples
 
