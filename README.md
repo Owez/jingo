@@ -7,7 +7,7 @@ A lightweight, high-level language designed to be sleek and robust.
 Simple oop example:
 
 ```jingo
--!- This snippet shows how classes work in this un-named language.
+-!- This snippet shows how classes work in Jingo.
 
 --- The breakfast class, providing the main breakfast implamentations found
 --- inside of this snippet
