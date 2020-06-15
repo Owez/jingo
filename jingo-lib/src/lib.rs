@@ -22,10 +22,11 @@
 pub mod backend;
 pub mod frontend;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+/// Runs code to the best of the compilers (current) ability, e.g. lexing.
+pub fn run(code: &str) {
+    let tokens = frontend::lexer::scan_tokens(code);
+
+    for token in tokens {
+        println!("{:?}", token);
     }
 }

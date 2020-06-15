@@ -1,4 +1,4 @@
-//! Self-contained argument parser and result enums for easy downstream interaction
+//! Self-contained argument parser and result enums for easy downstream interaction.
 
 use crate::log;
 use colored::*;
@@ -6,20 +6,20 @@ use std::env;
 use std::option_env;
 use std::path::PathBuf;
 
-/// The possible outcomes of user-to-cli interaction
+/// The possible outcomes of user-to-cli interaction.
 pub enum CLIResult {
-    /// User gave a file to open, along with an optional output `-o` file
+    /// User gave a file to open, along with an optional output `-o` file.
     File(PathBuf, Option<PathBuf>),
 
     /// A [String] of Jingo to parse directly without opening a file, along with
-    /// an optional output `-o` file
+    /// an optional output `-o` file.
     Direct(String, Option<PathBuf>),
 
     /// A fatal error occured. The attached [String] is user-friendly info regarding
-    /// what happened
+    /// what happened.
     Fatal(String),
 
-    /// Showed help or version message and returned, no need for further parsing.
+    /// Showed help or version message and returned, no need for further parsing..
     Handled,
 }
 
@@ -50,7 +50,7 @@ Options:
 }
 
 /// Shows current version from the `Cargo.toml` file of the jingo cli crate (the
-/// one you're in right now)
+/// one you're in right now).
 fn show_version() -> CLIResult {
     match option_env!("CARGO_PKG_VERSION") {
         Some(version) => {
@@ -64,7 +64,7 @@ fn show_version() -> CLIResult {
     }
 }
 
-/// Parses arguments given in by user and returns a [CLIResult]
+/// Parses arguments given in by user and returns a [CLIResult].
 pub fn parse_args() -> CLIResult {
     if env::args().len() == 1 {
         return show_help(true);
