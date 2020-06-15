@@ -28,9 +28,6 @@ pub enum JingoError {
     /// Downstream error when scanning, see [ScanningError] for more infomation.
     ScanningError(ScanningError),
 
-    /// See [crate::error] documentation for more on this.
-    Unknown,
-
     /// A part of the compiler is unfinished that the user tried to access with
     /// some extra info in the form of an optional [String] appended onto the end
     /// in brackets.
@@ -38,6 +35,9 @@ pub enum JingoError {
     /// **This shouldn't ever happen in public releases without docs saying it
     /// will happen!**
     Unimplemented(Option<String>),
+
+    /// See [crate::error] documentation for more on this.
+    Unknown,
 }
 
 impl fmt::Display for JingoError {
