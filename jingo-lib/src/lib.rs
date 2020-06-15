@@ -20,13 +20,19 @@
 //! ```
 
 pub mod backend;
+pub mod error;
 pub mod frontend;
 
-/// Runs code to the best of the compilers (current) ability, e.g. lexing.
-pub fn run(code: &str) {
-    let tokens = frontend::lexer::scan_tokens(code);
+use error::*;
+use std::path::PathBuf;
+
+/// Compiles code to the best of the compilers (current) ability, e.g. lexing.
+pub fn compile(code: &str, _output: Option<PathBuf>) -> Result<(), JingoError> {
+    let tokens = frontend::lexer::scan_tokens(code)?;
 
     for token in tokens {
         println!("{:?}", token);
     }
+
+    Ok(())
 }

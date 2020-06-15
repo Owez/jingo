@@ -1,5 +1,7 @@
 //! Contains user-facing printing tools for errors and general compiler logs.
 
+#![allow(dead_code)] // sparsely-used errors
+
 use colored::*;
 use std::process;
 

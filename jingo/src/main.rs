@@ -6,10 +6,18 @@ mod log;
 
 use cli::{parse_args, CLIResult};
 use colored::*;
-use jingo_lib::*;
+use jingo_lib::compile;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
+
+/// Wraps around the [jingo_lib::run] function and displays any panics in userland.
+fn run_compiler(code: &str, output: Option<PathBuf>) {
+    match compile(code, output) {
+        Ok(_) => log::info("Compiler finished successfully".to_string()),
+        Err(e) => log::fatal(e.to_string()),
+    };
+}
 
 /// Gets content of given path and handles errors in a user-friendly manner.
 fn read_path(path: PathBuf, file_name: &str) -> String {
@@ -39,18 +47,18 @@ fn read_path(path: PathBuf, file_name: &str) -> String {
 fn main() {
     match parse_args() {
         CLIResult::Fatal(e) => log::fatal(e),
-        CLIResult::Direct(code_string, _) => {
+        CLIResult::Direct(code_string, output) => {
             log::info("Compiling direct code..".to_string());
 
-            run(&code_string); // NOTE: may be changed in future
+            run_compiler(&code_string, output);
         }
-        CLIResult::File(path, _) => {
+        CLIResult::File(path, output) => {
             let file_name = path.file_name().unwrap().to_str().unwrap(); // thanks rust..
             log::info(format!("Compiling {}..", file_name.bold()));
 
             let code_string = read_path(path.clone(), file_name);
 
-            run(&code_string); // NOTE: may be changed in future
+            run_compiler(&code_string, output);
         }
         _ => (),
     }
