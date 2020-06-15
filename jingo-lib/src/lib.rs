@@ -2,7 +2,13 @@
 //!
 //! The central library for Jingo, containing the core of the compiler.
 //!
-//! This library is designed to be used downstream for the official CLI or any future language servers/other tooling utilising the compiler without wanting the added bulk of CLI dependencies.
+//! This library is designed to be used downstream for the official CLI or any
+//! future language servers/other tooling utilising the compiler without wanting
+//! the added bulk of CLI dependencies.
+//!
+//! All frontend (e.g. lexing, parsing, ast) are contained in the [crate::frontend]
+//! module and all backend parts (e.g. codegen) are contained in [crate::backend]
+//! if you need to interact with a specific part of the compiler.
 //!
 //! ## Usage
 //!
