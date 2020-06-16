@@ -1,9 +1,10 @@
-//! Self-contained lexer for the Jingo compiler.
+//! Self-contained lexer for the Jingo compiler. See [Scanner::scan_code] for main
+//! lexing capabilities.
 
 use crate::error::JingoError;
 use std::fmt;
 
-/// The token type, represents the type of token after scanning.
+/// The token type, represents the type of a [Token] after scanning.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum TokenType {
     /// `(`
@@ -90,14 +91,14 @@ pub enum TokenType {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct Token {
     /// Type of token an instance of this stuct is referring to.
-    token_type: TokenType,
+    pub token_type: TokenType,
 
     /// The raw character(s) used to make this token (also known as a
     /// [Lexeme](https://en.wikipedia.org/wiki/Lexeme)).
-    raw: String,
+    pub raw: String,
 
     /// Line number this token is found on.
-    line: usize,
+    pub line: usize,
 }
 
 impl Token {
@@ -123,10 +124,13 @@ impl fmt::Display for Token {
 /// inputted Jingo.
 pub struct Scanner {
     /// Code input as [String].
+    ///
+    /// *This will be empty until scanner is used once.*
     pub code: String,
 
-    /// Outputted tokens, ususally from [Scanner::scan_code]. This will be empty
-    /// until [Scanner::scan_code] is used.
+    /// Outputted tokens, ususally from [Scanner::scan_code].
+    ///
+    /// *This will be empty until the scanner is used once, like [Scanner::code].*
     pub tokens: Vec<Token>,
 
     /// First char in the current lexeme scanned.
