@@ -1,5 +1,5 @@
 //! **You may be searching for [the repository](https://github.com/scOwez/jingo),
-//! you are currently in the backend code for Jingo**
+//! you are currently in the backend code for Jingo.**
 //! 
 //! ---
 //! 
@@ -36,7 +36,7 @@ pub fn compile(code: &str, _output: Option<PathBuf>) -> Result<(), JingoError> {
     let tokens = frontend::lexer::scan_tokens(code)?;
 
     for token in tokens {
-        println!("{:?}", token);
+        println!("{}", token);
     }
 
     Ok(())

@@ -29,3 +29,8 @@ pub fn error_line(line: i32, message: String) {
 pub fn info(message: String) {
     println!("{} {}", "Info:".blue(), message);
 }
+
+/// Displays a success message in green.
+pub fn success(message: String) {
+    println!("{} {}", "Success:".green(), message);
+}
