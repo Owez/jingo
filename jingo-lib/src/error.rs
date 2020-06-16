@@ -1,4 +1,4 @@
-//! This module contains various enums and implamentations of errors.
+//! Various enums and implementations of errors for downstream use.
 //!
 //! Most error enums include an `Unknown` field, this is used for when there was
 //! a fatal unknown error whilst doing something in the jurastiction of that error

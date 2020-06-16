@@ -32,10 +32,12 @@ use error::*;
 use std::path::PathBuf;
 
 /// Compiles code to the best of the compilers (current) ability, e.g. lexing.
-pub fn compile(code: &str, _output: Option<PathBuf>) -> Result<(), JingoError> {
-    let tokens = frontend::lexer::scan_tokens(code)?;
+pub fn compile(code: String, _output: Option<PathBuf>) -> Result<(), JingoError> {
+    let mut scanner = frontend::lexer::Scanner::new(code);
 
-    for token in tokens {
+    scanner.scan_code()?;
+
+    for token in scanner.tokens {
         println!("{}", token);
     }
 

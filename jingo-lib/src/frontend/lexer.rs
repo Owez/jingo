@@ -97,7 +97,19 @@ pub struct Token {
     raw: String,
 
     /// Line number this token is found on.
-    line: u32,
+    line: usize,
+}
+
+impl Token {
+    /// Shortcut for adding a token, taking in the same parameters as normal but
+    /// in a more consise manner.
+    pub fn new(token_type: TokenType, raw: String, line: usize) -> Self {
+        Self {
+            token_type,
+            raw,
+            line,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -106,7 +118,55 @@ impl fmt::Display for Token {
     }
 }
 
-/// Primary entrypoint to lexeing, returns a [Vec]<[Token]> from given &[str] input.
-pub fn scan_tokens(_code: &str) -> Result<Vec<Token>, JingoError> {
-    Err(JingoError::Unimplemented(Some("scanner".to_string())))
+/// The main entrypoint into lexing, using primarily [Scanner::new] and
+/// [Scanner::scan_code], you are able to fully tokenize (into [Vec]<[Token]>)
+/// inputted Jingo.
+pub struct Scanner {
+    /// Code input as [String].
+    pub code: String,
+
+    /// Outputted tokens, ususally from [Scanner::scan_code]. This will be empty
+    /// until [Scanner::scan_code] is used.
+    pub tokens: Vec<Token>,
+
+    /// First char in the current lexeme scanned.
+    start: usize,
+
+    /// Character currently considering.
+    current: usize,
+
+    /// Current line.
+    line: usize,
+}
+
+impl Scanner {
+    /// Creates a new [Scanner] from code.
+    pub fn new(code: String) -> Self {
+        Self {
+            code: code,
+            tokens: vec![],
+            start: 0,
+            current: 0,
+            line: 0,
+        }
+    }
+
+    /// Scans provided code stored in [Scanner::code] and saves tokens into [Scanner::tokens]
+    pub fn scan_code(&mut self) -> Result<(), JingoError> {
+        self.add_token(TokenType::Eof);
+
+        Ok(())
+    }
+
+    /// Adds new token to [Scanner::tokens] from private metadata stored in [Scanner].
+    fn add_token(&mut self, token_type: TokenType) {
+        let raw: String = self
+            .code
+            .chars()
+            .skip(self.start)
+            .take(self.current)
+            .collect();
+
+        self.tokens.push(Token::new(token_type, raw, self.line));
+    }
 }
