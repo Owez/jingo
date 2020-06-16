@@ -45,6 +45,11 @@ pub enum TokenType {
     Less,
     /// `<=`
     LessEqual,
+    /// `--`, normal eol comment
+    Comment,
+    /// `---`, documentation comment, like
+    /// [rusts](https://doc.rust-lang.org/rust-by-example/meta/doc.html#doc-comments)
+    DocComment,
     /// Identifier, some non-token set of chars, e.g. `hi` in `fn hi () {}`
     Identifier,
     /// A string literal, e.g. `"x"`
@@ -123,15 +128,14 @@ impl fmt::Display for Token {
 /// [Scanner::scan_code], you are able to fully tokenize (into [Vec]<[Token]>)
 /// inputted Jingo.
 pub struct Scanner {
-    /// Code input as [String].
-    ///
-    /// *This will be empty until scanner is used once.*
-    pub code: String,
-
     /// Outputted tokens, ususally from [Scanner::scan_code].
     ///
-    /// *This will be empty until the scanner is used once, like [Scanner::code].*
+    /// *This will be empty until the scanner is used once.*
     pub tokens: Vec<Token>,
+
+    /// Code input represented as Vec<chars> for easier usage within [Scanner]'s
+    /// contents.
+    code: Vec<char>,
 
     /// First char in the current lexeme scanned.
     start: usize,
@@ -145,28 +149,73 @@ pub struct Scanner {
 
 impl Scanner {
     /// Creates a new [Scanner] from code.
-    pub fn new(code: String) -> Self {
+    pub fn new() -> Self {
         Self {
-            code: code,
+            code: vec![],
             tokens: vec![],
             start: 0,
             current: 0,
-            line: 0,
+            line: 1,
         }
     }
 
-    /// Scans provided code stored in [Scanner::code] and saves tokens into [Scanner::tokens]
-    pub fn scan_code(&mut self) -> Result<(), JingoError> {
-        self.add_token(TokenType::Eof);
+    /// Scans provided code and saves lexed tokens into [Scanner::tokens].
+    pub fn scan_code(&mut self, code: String) -> Result<(), JingoError> {
+        self.setup_scanner(code);
+
+        // NOTE: should be moved into a continuous scanner
+        self.scan_token()?;
+
+        // Add custom empty EOF token
+        self.tokens
+            .push(Token::new(TokenType::Eof, "".to_string(), self.line));
 
         Ok(())
+    }
+
+    /// Scans next token in [Scanner::code].
+    fn scan_token(&mut self) -> Result<(), JingoError> {
+        let c = self.advance();
+
+        match c {
+            '(' => self.add_token(TokenType::LeftBrak),
+            ')' => self.add_token(TokenType::RightBrack),
+            '{' => self.add_token(TokenType::LeftBrace),
+            '}' => self.add_token(TokenType::RightBrace),
+            ',' => self.add_token(TokenType::Comma),
+            '.' => self.add_token(TokenType::Dot),
+            '+' => self.add_token(TokenType::Plus),
+            '-' => self.add_token(TokenType::Minus),
+            ';' => self.add_token(TokenType::Semicolon),
+            '*' => self.add_token(TokenType::Star),
+            _ => return Err(JingoError::Unimplemented(Some("token match".to_string()))),
+        }
+
+        Ok(())
+    }
+
+    /// Sets [Scanner::start], [Scanner::current] and [Scanner::line] offsets
+    /// back to original `0, 0, 1` and sets [Scanner::code] to given `code`.
+    fn setup_scanner(&mut self, code: String) {
+        self.code = code.chars().collect();
+
+        self.start = 0;
+        self.current = 0;
+        self.line = 0;
+    }
+
+    /// Advances through sourcecode onto the next char and returns.
+    fn advance(&mut self) -> char {
+        self.current += 1;
+
+        self.code[self.current - 1]
     }
 
     /// Adds new token to [Scanner::tokens] from private metadata stored in [Scanner].
     fn add_token(&mut self, token_type: TokenType) {
         let raw: String = self
             .code
-            .chars()
+            .iter()
             .skip(self.start)
             .take(self.current)
             .collect();
