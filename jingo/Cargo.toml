@@ -1,8 +1,10 @@
+# NOTE: This should never be published to crates.io, only `jingo-lib/`
+
 [package]
 name = "jingo"
 description = "The official CLI for Jingo (code for the `./jingo [file]` program)."
 version = "0.1.0"
-authors = ["Owez <owez@scalist.net>"]
+authors = ["Owez <root@ogriffiths.com>"]
 edition = "2018"
 
 [dependencies]
