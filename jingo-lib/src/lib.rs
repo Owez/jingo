@@ -33,9 +33,9 @@ use std::path::PathBuf;
 
 /// Compiles code to the best of the compilers (current) ability, e.g. lexing.
 pub fn compile(code: String, _output: Option<PathBuf>) -> Result<(), JingoError> {
-    let mut scanner = frontend::lexer::Scanner::new(code);
+    let mut scanner = frontend::lexer::Scanner::new();
 
-    scanner.scan_code()?;
+    scanner.scan_code(code)?;
 
     for token in scanner.tokens {
         println!("{}", token);
