@@ -1,6 +1,6 @@
-//! This module contains all the frontend activities regarding Jingo.
+//! Frontend activities regarding Jingo, such as lexing, parsing and the ast.
 //!
-//! This includes parts of the compiler like lexing, parsing, ast, scoping and
-//! other minor parts before it is ususally passed over to the [crate::backend].
+//! This is the first major stage in this compiler before it's handed over to the
+//! [crate::backend] module for codegen and the final stages.
 
 pub mod lexer;
