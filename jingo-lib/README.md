@@ -1,6 +1,6 @@
 # Jingo Library
 
-**You may be searching for [the repository](https://github.com/scOwez/jingo), you are currently in the backend code for Jingo**
+**You may be searching for [the repository](https://github.com/scOwez/jingo), you are currently in the backend code for Jingo.**
 
 ---
 

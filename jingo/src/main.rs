@@ -1,5 +1,5 @@
 //! **You may be searching for [the repository](https://github.com/scOwez/jingo),
-//! you are currently in the CLI code for Jingo**
+//! you are currently in the CLI code for Jingo.**
 //! 
 //! ---
 //! 
@@ -20,7 +20,7 @@ use std::path::PathBuf;
 /// Wraps around the [jingo_lib::run] function and displays any panics in userland.
 fn run_compiler(code: &str, output: Option<PathBuf>) {
     match compile(code, output) {
-        Ok(_) => log::info("Compiler finished successfully".to_string()),
+        Ok(_) => log::success("Compiler finished successfully".to_string()),
         Err(e) => log::fatal(e.to_string()),
     };
 }

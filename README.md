@@ -44,8 +44,10 @@ First make sure you have Rust [installed](https://www.rust-lang.org/tools/instal
 To build/run:
 
 ```bash
-cargo run --release --bin jingo # run it, binary is saved to `target/release/jingo`
-cargo build --release --bin jingo # build only, binary is saved to `target/release/jingo`
+# binary is always saved to `target/release/jingo`
+
+cargo run --release --bin jingo # build it then run it
+cargo build --release --bin jingo # build only
 ```
 
 If you are looking to use **only** the compiler library, just add it to your project's `Cargo.toml`:

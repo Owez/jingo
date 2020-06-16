@@ -1,6 +1,6 @@
 # Jingo CLI
 
-**You may be searching for [the repository](https://github.com/scOwez/jingo), you are currently in the CLI code for Jingo**
+**You may be searching for [the repository](https://github.com/scOwez/jingo), you are currently in the CLI code for Jingo.**
 
 ---
 
