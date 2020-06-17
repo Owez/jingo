@@ -256,7 +256,7 @@ fn scan_next_token(
 /// // please note that jingo != morse code, just a lexer torture test,
 /// // should output something like `Ok([dot, dot, dot, fslash, doccomment])`.
 ///
-/// println!("{:?}", scan_code(input); 
+/// println!("{:?}", scan_code(input)); 
 /// ```
 pub fn scan_code(code: &str) -> Result<Vec<Token>, JingoError> {
     let mut tokens = vec![]; // resulting tokens
