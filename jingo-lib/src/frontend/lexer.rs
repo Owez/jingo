@@ -48,13 +48,15 @@ pub enum TokenType {
     /// `--`, normal eol comment
     Comment,
     /// `---`, documentation comment, like
-    /// [rusts](https://doc.rust-lang.org/rust-by-example/meta/doc.html#doc-comments)
+    /// [rusts](https://doc.rust-lang.org/rust-by-example/meta/doc.html#doc-comments).
     DocComment,
+    /// `-!-`, Similar to a [TokenType::DocComment] but for module headers.
+    HeaderComment,
     /// Identifier, some non-token set of chars, e.g. `hi` in `fn hi () {}`
     Identifier,
-    /// A string literal, e.g. `"x"`
+    /// A string literal, e.g. `"x"`.
     StringLit,
-    /// A number literal, e.g. `5`
+    /// A number literal, e.g. `5`.
     NumLit,
     /// `and`
     And,
@@ -154,6 +156,8 @@ fn scan_next_token(
         ')' => add_token(TokenType::RightBrack, c.to_string()),
         '{' => add_token(TokenType::LeftBrace, c.to_string()),
         '}' => add_token(TokenType::RightBrace, c.to_string()),
+        ',' => add_token(TokenType::Comma, c.to_string()),
+        '.' => add_token(TokenType::Dot, c.to_string()),
         ';' => add_token(TokenType::Semicolon, c.to_string()),
         '/' => add_token(TokenType::FSlash, c.to_string()),
         '*' => add_token(TokenType::Star, c.to_string()),
@@ -165,6 +169,8 @@ fn scan_next_token(
                 } else {
                     add_token(TokenType::Comment, "--".to_string())
                 }
+            } else if peek_next('!') && peek_next('-') {
+                add_token(TokenType::HeaderComment, "-!-".to_string())
             } else {
                 add_token(TokenType::Minus, c.to_string())
             }
