@@ -124,102 +124,47 @@ impl fmt::Display for Token {
     }
 }
 
-/// The main entrypoint into lexing, using primarily [Scanner::new] and
-/// [Scanner::scan_code], you are able to fully tokenize (into [Vec]<[Token]>)
-/// inputted Jingo.
-pub struct Scanner {
-    /// Outputted tokens, ususally from [Scanner::scan_code].
-    ///
-    /// *This will be empty until the scanner is used once.*
-    pub tokens: Vec<Token>,
+/// Scans single token, [usize] it provides is how many characters to skip over
+/// in a parent loop that calls this everytime after a lookahead was used.
+fn scan_token(tokens: &mut Vec<Token>, c: char, cur_line: &mut usize) -> Result<usize, JingoError> {
+    let mut add_token = |token_type: TokenType, raw: String| {
+        tokens.push(Token::new(token_type, raw, *cur_line));
+    }; // shortcut to add token
 
-    /// Code input represented as Vec<chars> for easier usage within [Scanner]'s
-    /// contents.
-    code: Vec<char>,
+    match c {
+        '(' => add_token(TokenType::LeftBrak, c.to_string()),
+        ')' => add_token(TokenType::RightBrack, c.to_string()),
+        '{' => add_token(TokenType::LeftBrace, c.to_string()),
+        '}' => add_token(TokenType::RightBrace, c.to_string()),
+        '+' => add_token(TokenType::Plus, c.to_string()),
+        '-' => add_token(TokenType::Minus, c.to_string()),
+        ';' => add_token(TokenType::Minus, c.to_string()),
+        '*' => add_token(TokenType::Minus, c.to_string()),
+        '\n' => *cur_line += 1,
+        _ => {
+            return Err(JingoError::Unimplemented(Some(
+                "token matching".to_string(),
+            )))
+        }
+    }
 
-    /// First char in the current lexeme scanned.
-    start: usize,
-
-    /// Character currently considering.
-    current: usize,
-
-    /// Current line.
-    line: usize,
+    Ok(0)
 }
 
-impl Scanner {
-    /// Creates a new [Scanner] from code.
-    pub fn new() -> Self {
-        Self {
-            code: vec![],
-            tokens: vec![],
-            start: 0,
-            current: 0,
-            line: 1,
-        }
-    }
+/// Lexes code into [Vec]<Token> or provides an error in the form of [JingoError].
+pub fn scan_code(code: &str) -> Result<Vec<Token>, JingoError> {
+    let mut tokens = vec![]; // resulting tokens
+    let mut cur_line = 1; // current line, appended as `\n` is found
+    let mut skip_next_iters = 0; // how many times to skip
 
-    /// Scans provided code and saves lexed tokens into [Scanner::tokens].
-    pub fn scan_code(&mut self, code: String) -> Result<(), JingoError> {
-        self.setup_scanner(code);
-
-        // NOTE: should be moved into a continuous scanner
-        self.scan_token()?;
-
-        // Add custom empty EOF token
-        self.tokens
-            .push(Token::new(TokenType::Eof, "".to_string(), self.line));
-
-        Ok(())
-    }
-
-    /// Scans next token in [Scanner::code].
-    fn scan_token(&mut self) -> Result<(), JingoError> {
-        let c = self.advance();
-
-        match c {
-            '(' => self.add_token(TokenType::LeftBrak),
-            ')' => self.add_token(TokenType::RightBrack),
-            '{' => self.add_token(TokenType::LeftBrace),
-            '}' => self.add_token(TokenType::RightBrace),
-            ',' => self.add_token(TokenType::Comma),
-            '.' => self.add_token(TokenType::Dot),
-            '+' => self.add_token(TokenType::Plus),
-            '-' => self.add_token(TokenType::Minus),
-            ';' => self.add_token(TokenType::Semicolon),
-            '*' => self.add_token(TokenType::Star),
-            _ => return Err(JingoError::Unimplemented(Some("token match".to_string()))),
+    for c in code.chars().peekable() {
+        if skip_next_iters > 0 {
+            skip_next_iters -= 1;
+            continue;
         }
 
-        Ok(())
+        skip_next_iters = scan_token(&mut tokens, c, &mut cur_line)?;
     }
 
-    /// Sets [Scanner::start], [Scanner::current] and [Scanner::line] offsets
-    /// back to original `0, 0, 1` and sets [Scanner::code] to given `code`.
-    fn setup_scanner(&mut self, code: String) {
-        self.code = code.chars().collect();
-
-        self.start = 0;
-        self.current = 0;
-        self.line = 0;
-    }
-
-    /// Advances through sourcecode onto the next char and returns.
-    fn advance(&mut self) -> char {
-        self.current += 1;
-
-        self.code[self.current - 1]
-    }
-
-    /// Adds new token to [Scanner::tokens] from private metadata stored in [Scanner].
-    fn add_token(&mut self, token_type: TokenType) {
-        let raw: String = self
-            .code
-            .iter()
-            .skip(self.start)
-            .take(self.current)
-            .collect();
-
-        self.tokens.push(Token::new(token_type, raw, self.line));
-    }
+    Ok(tokens)
 }

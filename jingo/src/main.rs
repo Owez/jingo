@@ -18,8 +18,11 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 /// Wraps around the [jingo_lib::run] function and displays any panics in userland.
+/// 
+/// This function converts [String] to &[str] due to the nature of cli and path
+/// imports both using [String] but `jingo-lib` not.
 fn run_compiler(code: String, output: Option<PathBuf>) {
-    match compile(code, output) {
+    match compile(&code, output) {
         Ok(_) => log::success("Compiler finished successfully".to_string()),
         Err(e) => log::fatal(e.to_string()),
     };
