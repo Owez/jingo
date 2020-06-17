@@ -49,11 +49,17 @@ pub enum TokenType {
     Comment,
     /// `---`, documentation comment, like
     /// [rusts](https://doc.rust-lang.org/rust-by-example/meta/doc.html#doc-comments).
-    DocComment,
+    ///
+    /// TODO: do string interning.
+    DocComment(String),
     /// `-!-`, Similar to a [TokenType::DocComment] but for module headers.
-    HeaderComment,
+    ///
+    /// TODO: do string interning.
+    HeaderComment(String),
     /// Identifier, some non-token set of chars, e.g. `hi` in `fn hi () {}`
-    Identifier,
+    ///
+    /// TODO: do string interning.
+    Identifier(String),
     /// A string literal, e.g. `"x"`.
     StringLit,
     /// A number literal, e.g. `5`.
@@ -126,6 +132,27 @@ impl fmt::Display for Token {
     }
 }
 
+/// Moves all characters in an iterator to a [String] until it hits a `\n`. This
+/// is useful for comments, especially doc comments.
+fn get_to_eol(chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
+    let mut comment = String::new();
+
+    loop {
+        match chars.next() {
+            Some(c) => {
+                if c == '\n' {
+                    break;
+                } else {
+                    comment.push(c);
+                }
+            }
+            None => break,
+        }
+    }
+
+    comment
+}
+
 /// Scans single token, [usize] it provides is how many characters to skip over
 /// in a parent loop that calls this everytime after a lookahead was used.
 fn scan_next_token(
@@ -165,16 +192,20 @@ fn scan_next_token(
         '-' => {
             if peek_next('-') {
                 if peek_next('-') {
-                    add_token(TokenType::DocComment, "---".to_string())
+                    let char_content = get_to_eol(chars);
+
+                    add_token(TokenType::DocComment(char_content), "---".to_string())
                 } else {
                     add_token(TokenType::Comment, "--".to_string())
                 }
             } else if peek_next('!') && peek_next('-') {
-                add_token(TokenType::HeaderComment, "-!-".to_string())
+                let char_content = get_to_eol(chars);
+
+                add_token(TokenType::HeaderComment(char_content), "-!-".to_string())
             } else {
                 add_token(TokenType::Minus, c.to_string())
             }
-        } // `-` for minus, `--` for comment or `---` for docstring
+        } // `-` for minus, `--` for comment, `---` for docstring or `-!-` for header comment
         '=' => {
             if peek_next('=') {
                 add_token(TokenType::EqualEqual, "==".to_string())
