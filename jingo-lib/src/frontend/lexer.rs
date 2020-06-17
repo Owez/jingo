@@ -126,10 +126,27 @@ impl fmt::Display for Token {
 
 /// Scans single token, [usize] it provides is how many characters to skip over
 /// in a parent loop that calls this everytime after a lookahead was used.
-fn scan_token(tokens: &mut Vec<Token>, c: char, cur_line: &mut usize) -> Result<usize, JingoError> {
+fn scan_next_token(
+    tokens: &mut Vec<Token>,
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    cur_line: &mut usize,
+) -> Result<bool, JingoError> {
+    let c = match chars.next() {
+        Some(x) => x,
+        None => return Ok(true),
+    };
+
     let mut add_token = |token_type: TokenType, raw: String| {
         tokens.push(Token::new(token_type, raw, *cur_line));
     }; // shortcut to add token
+
+    let mut peek_next = |next_char: char| -> bool {
+        if chars.peek() == Some(&next_char) {
+            return true;
+        }
+
+        false
+    }; // peeks for next item and if it exists, consumes it
 
     match c {
         '(' => add_token(TokenType::LeftBrak, c.to_string()),
@@ -137,12 +154,21 @@ fn scan_token(tokens: &mut Vec<Token>, c: char, cur_line: &mut usize) -> Result<
         '{' => add_token(TokenType::LeftBrace, c.to_string()),
         '}' => add_token(TokenType::RightBrace, c.to_string()),
         '+' => add_token(TokenType::Plus, c.to_string()),
-        // '-' => add_token(TokenType::Minus, c.to_string()), // NOTE: see commented out 3 lines below
-        ';' => add_token(TokenType::Minus, c.to_string()),
-        '*' => add_token(TokenType::Minus, c.to_string()),
-        // '-' => {
-        //     // TODO
-        // }, // comments or minus
+        '-' => {
+            if peek_next('-') {
+                if peek_next('-') {
+                    add_token(TokenType::DocComment, "---".to_string())
+                } else {
+                    add_token(TokenType::Comment, "--".to_string())
+                }
+            } else {
+                add_token(TokenType::Minus, c.to_string())
+            }
+        } // `-` for minus, `--` for comment or `---` for docstring
+        ';' => add_token(TokenType::Semicolon, c.to_string()),
+        '/' => add_token(TokenType::FSlash, c.to_string()),
+        '*' => add_token(TokenType::Star, c.to_string()),
+        '!' => add_token(TokenType::Not, c.to_string()),
         '\n' => *cur_line += 1,  // add line
         '\r' | '\t' | ' ' => (), // ignore whitespace
         _ => {
@@ -153,22 +179,20 @@ fn scan_token(tokens: &mut Vec<Token>, c: char, cur_line: &mut usize) -> Result<
         } // not implemented more
     }
 
-    Ok(0)
+    Ok(false)
 }
 
 /// Lexes code into [Vec]<[Token]> or provides an error in the form of [JingoError].
 pub fn scan_code(code: &str) -> Result<Vec<Token>, JingoError> {
     let mut tokens = vec![]; // resulting tokens
     let mut cur_line = 1; // current line, appended as `\n` is found
-    let mut skip_next_iters = 0; // how many times to skip
 
-    for c in code.chars().peekable() {
-        if skip_next_iters > 0 {
-            skip_next_iters -= 1;
-            continue;
+    let mut chars = code.chars().peekable();
+
+    loop {
+        if scan_next_token(&mut tokens, &mut chars, &mut cur_line)? {
+            break;
         }
-
-        skip_next_iters = scan_token(&mut tokens, c, &mut cur_line)?;
     }
 
     Ok(tokens)
