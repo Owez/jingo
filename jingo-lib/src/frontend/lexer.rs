@@ -175,28 +175,28 @@ fn scan_next_token(
             } else {
                 add_token(TokenType::Equal, c.to_string())
             }
-        }
+        } // `=` for equals, `==` for equal to
         '<' => {
             if peek_next('=') {
                 add_token(TokenType::LessEqual, "<=".to_string())
             } else {
                 add_token(TokenType::Less, c.to_string())
             }
-        }
+        } // `<` for less than, `<=` for less than or equal to
         '>' => {
             if peek_next('=') {
                 add_token(TokenType::GreaterEqual, ">=".to_string())
             } else {
                 add_token(TokenType::Greater, c.to_string())
             }
-        }
+        } // `>` for greater than, `>=` for greater than or equal to
         '!' => {
             if peek_next('=') {
                 add_token(TokenType::NotEqual, "!=".to_string())
             } else {
                 add_token(TokenType::Not, c.to_string())
             }
-        }
+        } // `!` for not, `!=` for not equal
         '\n' => *cur_line += 1,  // add line
         '\r' | '\t' | ' ' => (), // ignore whitespace
         _ => {
