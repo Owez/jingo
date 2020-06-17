@@ -1,4 +1,4 @@
-//! Self-contained lexer for the Jingo compiler. See [Scanner::scan_code] for main
+//! Self-contained lexer for the Jingo compiler. See [scan_code] for main
 //! lexing capabilities.
 
 use crate::error::JingoError;
@@ -137,21 +137,26 @@ fn scan_token(tokens: &mut Vec<Token>, c: char, cur_line: &mut usize) -> Result<
         '{' => add_token(TokenType::LeftBrace, c.to_string()),
         '}' => add_token(TokenType::RightBrace, c.to_string()),
         '+' => add_token(TokenType::Plus, c.to_string()),
-        '-' => add_token(TokenType::Minus, c.to_string()),
+        // '-' => add_token(TokenType::Minus, c.to_string()), // NOTE: see commented out 3 lines below
         ';' => add_token(TokenType::Minus, c.to_string()),
         '*' => add_token(TokenType::Minus, c.to_string()),
-        '\n' => *cur_line += 1,
+        // '-' => {
+        //     // TODO
+        // }, // comments or minus
+        '\n' => *cur_line += 1,  // add line
+        '\r' | '\t' | ' ' => (), // ignore whitespace
         _ => {
-            return Err(JingoError::Unimplemented(Some(
-                "token matching".to_string(),
-            )))
-        }
+            return Err(JingoError::Unimplemented(Some(format!(
+                "token matching for `{}`",
+                c
+            ))))
+        } // not implemented more
     }
 
     Ok(0)
 }
 
-/// Lexes code into [Vec]<Token> or provides an error in the form of [JingoError].
+/// Lexes code into [Vec]<[Token]> or provides an error in the form of [JingoError].
 pub fn scan_code(code: &str) -> Result<Vec<Token>, JingoError> {
     let mut tokens = vec![]; // resulting tokens
     let mut cur_line = 1; // current line, appended as `\n` is found
