@@ -191,6 +191,8 @@ fn scan_next_token(
 
                     add_token(TokenType::DocComment(char_content))
                 } else {
+                    get_to_eol(chars); // remove but dont save
+
                     add_token(TokenType::Comment)
                 }
             } else if peek_next('!') && peek_next('-') {
@@ -243,6 +245,19 @@ fn scan_next_token(
 }
 
 /// Lexes code into [Vec]<[Token]> or provides an error in the form of [JingoError].
+///
+/// # Examples
+///
+/// ```rust
+/// use jingo_lib::frontend::lexer::scan_code;
+/// 
+/// let input = ".../---/...";
+/// 
+/// // please note that jingo != morse code, just a lexer torture test,
+/// // should output something like `Ok([dot, dot, dot, fslash, doccomment])`.
+///
+/// println!("{:?}", scan_code(input); 
+/// ```
 pub fn scan_code(code: &str) -> Result<Vec<Token>, JingoError> {
     let mut tokens = vec![]; // resulting tokens
     let mut cur_line = 1; // current line, appended as `\n` is found
