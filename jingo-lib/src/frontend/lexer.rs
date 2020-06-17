@@ -31,18 +31,18 @@ pub enum TokenType {
     Star,
     /// `!`
     Not,
-    /// `!=`
-    NotEqual,
     /// `=`
     Equal,
-    /// `==`
-    EqualEqual,
-    /// `>`
-    Greater,
-    /// `>=`
-    GreaterEqual,
     /// `<`
     Less,
+    /// `>`
+    Greater,
+    /// `!=`
+    NotEqual,
+    /// `==`
+    EqualEqual,
+    /// `>=`
+    GreaterEqual,
     /// `<=`
     LessEqual,
     /// `--`, normal eol comment
@@ -142,6 +142,7 @@ fn scan_next_token(
 
     let mut peek_next = |next_char: char| -> bool {
         if chars.peek() == Some(&next_char) {
+            chars.next();
             return true;
         }
 
@@ -153,6 +154,9 @@ fn scan_next_token(
         ')' => add_token(TokenType::RightBrack, c.to_string()),
         '{' => add_token(TokenType::LeftBrace, c.to_string()),
         '}' => add_token(TokenType::RightBrace, c.to_string()),
+        ';' => add_token(TokenType::Semicolon, c.to_string()),
+        '/' => add_token(TokenType::FSlash, c.to_string()),
+        '*' => add_token(TokenType::Star, c.to_string()),
         '+' => add_token(TokenType::Plus, c.to_string()),
         '-' => {
             if peek_next('-') {
@@ -165,10 +169,34 @@ fn scan_next_token(
                 add_token(TokenType::Minus, c.to_string())
             }
         } // `-` for minus, `--` for comment or `---` for docstring
-        ';' => add_token(TokenType::Semicolon, c.to_string()),
-        '/' => add_token(TokenType::FSlash, c.to_string()),
-        '*' => add_token(TokenType::Star, c.to_string()),
-        '!' => add_token(TokenType::Not, c.to_string()),
+        '=' => {
+            if peek_next('=') {
+                add_token(TokenType::EqualEqual, "==".to_string())
+            } else {
+                add_token(TokenType::Equal, c.to_string())
+            }
+        }
+        '<' => {
+            if peek_next('=') {
+                add_token(TokenType::LessEqual, "<=".to_string())
+            } else {
+                add_token(TokenType::Less, c.to_string())
+            }
+        }
+        '>' => {
+            if peek_next('=') {
+                add_token(TokenType::GreaterEqual, ">=".to_string())
+            } else {
+                add_token(TokenType::Greater, c.to_string())
+            }
+        }
+        '!' => {
+            if peek_next('=') {
+                add_token(TokenType::NotEqual, "!=".to_string())
+            } else {
+                add_token(TokenType::Not, c.to_string())
+            }
+        }
         '\n' => *cur_line += 1,  // add line
         '\r' | '\t' | ' ' => (), // ignore whitespace
         _ => {
