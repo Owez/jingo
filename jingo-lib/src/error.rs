@@ -65,6 +65,24 @@ impl fmt::Display for JingoError {
 /// Errors for the [crate::frontend::lexer] module.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum ScanningError {
+    /// When a string was started but jingo reached the end of the file without
+    /// it being closed.
+    ///
+    /// # Examples
+    ///
+    /// ```jingo
+    /// fn awesome(input) {
+    ///     return input * 2;
+    /// }
+    ///
+    /// var x = "following string never closes
+    ///
+    /// fn broken_func(fix_string) {
+    ///     print fix_string;
+    /// }
+    /// ```
+    UnterminatedString(usize),
+
     /// See [crate::error] documentation for more on this.
     Unknown,
 }
@@ -72,6 +90,11 @@ pub enum ScanningError {
 impl fmt::Display for ScanningError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            ScanningError::UnterminatedString(line) => write!(
+                f,
+                "A string starting on line {} was opened but never closed (unterminated string)",
+                line
+            ),
             ScanningError::Unknown => write!(f, "Unknown error whilst scanning"),
         }
     }
