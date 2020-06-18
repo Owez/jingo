@@ -1,7 +1,7 @@
 //! Self-contained lexer for the Jingo compiler. See [scan_code] for main
 //! lexing capabilities.
 
-use crate::error::JingoError;
+use crate::error::{JingoError, ScanningError};
 use std::fmt;
 
 /// The token type, represents the type of a [Token] after scanning.
@@ -127,9 +127,42 @@ impl fmt::Display for Token {
     }
 }
 
+/// Gets a string literal by peeking until next `"` is found or returns
+/// [JingoError::ScanningError]([ScanningError::UnterminatedString]) if the string
+/// was never closed.
+fn get_strlit_data(
+    tokens: &mut Vec<Token>,
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    cur_line: &mut usize,
+) -> Result<(), JingoError> {
+    let start_line = cur_line.clone(); // line started on
+    let mut content = String::new(); // string innards
+    let mut end_delimiter = false; // if another `"` was detected
+
+    for c in chars {
+        if c == '"' {
+            end_delimiter = true;
+            break;
+        } else if c == '\n' {
+            *cur_line += 1;
+        }
+
+        content.push(c);
+    }
+
+    if end_delimiter {
+        tokens.push(Token::new(TokenType::StringLit(content), start_line));
+        Ok(())
+    } else {
+        Err(JingoError::ScanningError(
+            ScanningError::UnterminatedString(start_line),
+        ))
+    }
+}
+
 /// Moves all characters in an iterator to a [String] until it hits a `\n`. This
 /// is useful for comments, especially doc comments.
-fn get_to_eol(chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
+fn get_comment_data(chars: &mut std::iter::Peekable<std::str::Chars>) -> String {
     let mut comment = String::new();
 
     loop {
@@ -161,7 +194,7 @@ fn scan_next_token(
     };
 
     let mut add_token = |token_type: TokenType| {
-        tokens.push(Token::new(token_type, *cur_line));
+        tokens.push(Token::new(token_type, cur_line.clone()));
     }; // shortcut to add token
 
     let mut peek_next = |next_char: char| -> bool {
@@ -187,22 +220,22 @@ fn scan_next_token(
         '-' => {
             if peek_next('-') {
                 if peek_next('-') {
-                    let char_content = get_to_eol(chars);
+                    let char_content = get_comment_data(chars);
 
                     add_token(TokenType::DocComment(char_content));
                 } else {
-                    get_to_eol(chars); // remove but dont save
+                    get_comment_data(chars); // remove but dont save
 
                     add_token(TokenType::Comment);
                 }
 
-                *cur_line += 1
+                *cur_line += 1;
             } else if peek_next('!') && peek_next('-') {
-                let char_content = get_to_eol(chars);
+                let char_content = get_comment_data(chars);
 
                 add_token(TokenType::HeaderComment(char_content));
 
-                *cur_line += 1
+                *cur_line += 1;
             } else {
                 add_token(TokenType::Minus)
             }
@@ -235,8 +268,9 @@ fn scan_next_token(
                 add_token(TokenType::Not);
             }
         } // `!` for not, `!=` for not equal
-        '\n' => *cur_line += 1,  // add line
-        '\r' | '\t' | ' ' => (), // ignore whitespace
+        '"' => get_strlit_data(tokens, chars, cur_line)?, // string literal/constant
+        '\n' => *cur_line += 1,                           // add line
+        '\r' | '\t' | ' ' => (),                          // ignore whitespace
         _ => {
             return Err(JingoError::Unimplemented(Some(format!(
                 "token matching for `{}`",
