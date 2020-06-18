@@ -1,5 +1,6 @@
 //! Tests lexing capabilities of [jingo_lib::frontend::lexer]-related parts.
 
+use jingo_lib::error::{JingoError, ScanningError};
 use jingo_lib::frontend::lexer::{scan_code, Token, TokenType};
 
 /// Default starting line for lexer
@@ -84,7 +85,7 @@ fn comments() {
 /// Ensures comments properly add increment the `line` for a token like other
 /// `\n`s would (due to the nature of some docstrings failing).
 #[test]
-fn comment_append_line() {
+fn comment_linenum_check() {
     let input = "-!-Header comment\n---Docstring comment\n--Normal comment";
 
     assert_eq!(
@@ -101,4 +102,25 @@ fn comment_append_line() {
             Token::new(TokenType::Comment, DEFAULT_LINE + 2),
         ])
     )
+}
+
+/// Basic functionality checks on string literals
+#[test]
+fn string_literal() {
+    // basic string test
+    assert_eq!(
+        scan_code("\"test\""),
+        Ok(vec![Token::new(
+            TokenType::StringLit("test".to_string()),
+            DEFAULT_LINE
+        )])
+    );
+
+    // unclosed string - should error
+    assert_eq!(
+        scan_code("\"unclosed string"),
+        Err(JingoError::ScanningError(
+            ScanningError::UnterminatedString(DEFAULT_LINE)
+        ))
+    );
 }
