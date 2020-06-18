@@ -77,8 +77,8 @@ impl fmt::Display for TokenType {
             TokenType::GreaterEqual => ">=".to_string(),
             TokenType::LessEqual => "<=".to_string(),
             TokenType::Comment => "--".to_string(),
-            TokenType::DocComment(content) => format!("--- {}", content),
-            TokenType::HeaderComment(content) => format!("-!- {}", content),
+            TokenType::DocComment(content) => format!("---{}", content),
+            TokenType::HeaderComment(content) => format!("-!-{}", content),
             TokenType::Identifier(content) => content.clone(),
             TokenType::StringLit(content) => format!("\"{}\"", content),
             TokenType::And => "and".to_string(),
@@ -189,46 +189,50 @@ fn scan_next_token(
                 if peek_next('-') {
                     let char_content = get_to_eol(chars);
 
-                    add_token(TokenType::DocComment(char_content))
+                    add_token(TokenType::DocComment(char_content));
                 } else {
                     get_to_eol(chars); // remove but dont save
 
-                    add_token(TokenType::Comment)
+                    add_token(TokenType::Comment);
                 }
+
+                *cur_line += 1
             } else if peek_next('!') && peek_next('-') {
                 let char_content = get_to_eol(chars);
 
-                add_token(TokenType::HeaderComment(char_content))
+                add_token(TokenType::HeaderComment(char_content));
+
+                *cur_line += 1
             } else {
                 add_token(TokenType::Minus)
             }
         } // `-` for minus, `--` for comment, `---` for docstring or `-!-` for header comment
         '=' => {
             if peek_next('=') {
-                add_token(TokenType::EqualEqual)
+                add_token(TokenType::EqualEqual);
             } else {
-                add_token(TokenType::Equal)
+                add_token(TokenType::Equal);
             }
         } // `=` for equals, `==` for equal to
         '<' => {
             if peek_next('=') {
-                add_token(TokenType::LessEqual)
+                add_token(TokenType::LessEqual);
             } else {
-                add_token(TokenType::Less)
+                add_token(TokenType::Less);
             }
         } // `<` for less than, `<=` for less than or equal to
         '>' => {
             if peek_next('=') {
-                add_token(TokenType::GreaterEqual)
+                add_token(TokenType::GreaterEqual);
             } else {
-                add_token(TokenType::Greater)
+                add_token(TokenType::Greater);
             }
         } // `>` for greater than, `>=` for greater than or equal to
         '!' => {
             if peek_next('=') {
-                add_token(TokenType::NotEqual)
+                add_token(TokenType::NotEqual);
             } else {
-                add_token(TokenType::Not)
+                add_token(TokenType::Not);
             }
         } // `!` for not, `!=` for not equal
         '\n' => *cur_line += 1,  // add line
@@ -250,13 +254,13 @@ fn scan_next_token(
 ///
 /// ```rust
 /// use jingo_lib::frontend::lexer::scan_code;
-/// 
+///
 /// let input = ".../---/...";
-/// 
+///
 /// // please note that jingo != morse code, just a lexer torture test,
 /// // should output something like `Ok([dot, dot, dot, fslash, doccomment])`.
 ///
-/// println!("{:?}", scan_code(input)); 
+/// println!("{:?}", scan_code(input));
 /// ```
 pub fn scan_code(code: &str) -> Result<Vec<Token>, JingoError> {
     let mut tokens = vec![]; // resulting tokens
