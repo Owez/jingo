@@ -80,3 +80,25 @@ fn comments() {
         );
     }
 }
+
+/// Ensures comments properly add increment the `line` for a token like other
+/// `\n`s would (due to the nature of some docstrings failing).
+#[test]
+fn comment_append_line() {
+    let input = "-!-Header comment\n---Docstring comment\n--Normal comment";
+
+    assert_eq!(
+        scan_code(input),
+        Ok(vec![
+            Token::new(
+                TokenType::HeaderComment("Header comment".to_string()),
+                DEFAULT_LINE
+            ),
+            Token::new(
+                TokenType::DocComment("Docstring comment".to_string()),
+                DEFAULT_LINE + 1
+            ),
+            Token::new(TokenType::Comment, DEFAULT_LINE + 2),
+        ])
+    )
+}

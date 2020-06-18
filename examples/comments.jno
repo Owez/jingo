@@ -1,0 +1,8 @@
+-!- This snippet tests comments, including the one you are currently reading
+-!- lexes/parses properly.
+
+-- Simple comment
+--- Docstring comment
+
+--- Docstring -- With comment on end
+-- Comment --- With docstring on end
