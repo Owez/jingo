@@ -4,5 +4,5 @@ description = "The central library for Jingo, containing the core of the compile
 version = "0.1.0"
 repository = "https://github.com/scOwez/jingo"
 license = "MIT"
-authors = ["scOwez <root@ogriffiths.com>"]
+authors = ["Owez <root@ogriffiths.com>"]
 edition = "2018"
