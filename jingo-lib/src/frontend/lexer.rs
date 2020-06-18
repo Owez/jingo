@@ -137,26 +137,25 @@ fn get_strlit_data(
 ) -> Result<(), JingoError> {
     let start_line = cur_line.clone(); // line started on
     let mut content = String::new(); // string innards
-    let mut end_delimiter = false; // if another `"` was detected
 
-    for c in chars {
-        if c == '"' {
-            end_delimiter = true;
-            break;
-        } else if c == '\n' {
-            *cur_line += 1;
+    loop {
+        match chars.next() {
+            Some(c) => {
+                if c == '"' {
+                    tokens.push(Token::new(TokenType::StringLit(content), start_line));
+                    return Ok(());
+                } else if c == '\n' {
+                    *cur_line += 1;
+                }
+
+                content.push(c);
+            }
+            None => {
+                return Err(JingoError::ScanningError(
+                    ScanningError::UnterminatedString(start_line),
+                ))
+            }
         }
-
-        content.push(c);
-    }
-
-    if end_delimiter {
-        tokens.push(Token::new(TokenType::StringLit(content), start_line));
-        Ok(())
-    } else {
-        Err(JingoError::ScanningError(
-            ScanningError::UnterminatedString(start_line),
-        ))
     }
 }
 
