@@ -83,6 +83,12 @@ pub enum ScanningError {
     /// ```
     UnterminatedString(usize),
 
+    /// A number was given that was not valid, possibly looking like `0-2-30`
+    InvalidNumber(usize),
+
+    /// A float was given that was not valid, possibly looking like `0...3221.`
+    InvalidFloat(usize),
+
     /// See [crate::error] documentation for more on this.
     Unknown,
 }
@@ -95,6 +101,12 @@ impl fmt::Display for ScanningError {
                 "A string starting on line {} was opened but never closed (unterminated string)",
                 line
             ),
+            ScanningError::InvalidNumber(line) => {
+                write!(f, "Invalid number found on line {} (bad int)", line)
+            }
+            ScanningError::InvalidFloat(line) => {
+                write!(f, "Invalid float found on line {} (bad float)", line)
+            }
             ScanningError::Unknown => write!(f, "Unknown error whilst scanning"),
         }
     }
