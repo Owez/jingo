@@ -35,7 +35,8 @@ pub enum TokenType {
     HeaderComment(String), // TODO: do string interning
     Identifier(String),    // TODO: do string interning
     StringLit(String),     // TODO: do string interning
-    NumLit,                // TODO figure out type
+    NumLit(i64),
+    FloatLit(f64),
     And,
     Class,
     Else,
@@ -81,9 +82,12 @@ impl fmt::Display for TokenType {
             TokenType::HeaderComment(content) => format!("-!-{}", content),
             TokenType::Identifier(content) => content.clone(),
             TokenType::StringLit(content) => format!("\"{}\"", content),
+            TokenType::NumLit(number) => number.to_string(),
+            TokenType::FloatLit(float) => float.to_string(),
             TokenType::And => "and".to_string(),
             TokenType::Class => "class".to_string(),
             TokenType::Else => "else".to_string(),
+            TokenType::False => "false".to_string(),
             TokenType::Func => "fun".to_string(),
             TokenType::For => "for".to_string(),
             TokenType::If => "if".to_string(),
@@ -96,7 +100,6 @@ impl fmt::Display for TokenType {
             TokenType::True => "true".to_string(),
             TokenType::Var => "var".to_string(),
             TokenType::While => "while".to_string(),
-            _ => "[unknown token]".to_string(), // NOTE: currently numlit
         };
 
         write!(f, "{}", str_rep)
@@ -155,6 +158,47 @@ fn get_strlit_data(
                     ScanningError::UnterminatedString(start_line),
                 ))
             }
+        }
+    }
+}
+
+/// Checks if char is a digit (0-9).
+fn is_digit(c: char) -> bool {
+    c >= '0' && c <= '9'
+}
+
+/// Similar to [get_strlit_data] but for number literals, mapping to
+/// [TokenType::NumLit] or [TokenType::FloatLit] if it has a `.`.
+fn get_numlit_data(
+    start_digit: char,
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    cur_line: &usize,
+) -> Result<TokenType, JingoError> {
+    let mut is_float = false; // once a `.` is detected, becomes a float
+    let mut content = start_digit.to_string();
+
+    for c in chars {
+        if c == '.' {
+            is_float = true;
+            content.push(c);
+        } else if is_digit(c) {
+            content.push(c);
+        }
+    }
+
+    if is_float {
+        match content.parse::<f64>() {
+            Ok(f) => Ok(TokenType::FloatLit(f)),
+            Err(_) => Err(JingoError::ScanningError(ScanningError::InvalidFloat(
+                cur_line.clone(),
+            ))),
+        }
+    } else {
+        match content.parse::<i64>() {
+            Ok(f) => Ok(TokenType::NumLit(f)),
+            Err(_) => Err(JingoError::ScanningError(ScanningError::InvalidNumber(
+                cur_line.clone(),
+            ))),
         }
     }
 }
@@ -268,6 +312,9 @@ fn scan_next_token(
             }
         } // `!` for not, `!=` for not equal
         '"' => get_strlit_data(tokens, chars, cur_line)?, // string literal/constant
+        '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+            add_token(get_numlit_data(c, chars, cur_line)?)
+        } // number literal
         '\n' => *cur_line += 1,                           // add line
         '\r' | '\t' | ' ' => (),                          // ignore whitespace
         _ => {
