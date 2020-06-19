@@ -34,3 +34,9 @@ pub fn info(message: String) {
 pub fn success(message: String) {
     println!("{} {}", "Success:".green(), message);
 }
+
+/// Displays a yellow warning message, indicating that something shouldn't happen
+/// but program should compile successfully nontheless (minor error).
+pub fn warn(message: String) {
+    eprintln!("{} {}", "Warning:".yellow(), message);
+}

@@ -1,3 +1,8 @@
+# jingo temp test file
+test.jno
+test.jingo
+
+# rust
 /target
 */target
 **/target
