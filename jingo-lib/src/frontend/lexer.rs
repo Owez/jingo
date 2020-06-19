@@ -183,7 +183,7 @@ fn get_numlit_data(
             content.push(c);
         } else if is_digit(c) {
             content.push(c);
-        }
+        } // TODO figure out \n, may have to do new parsing method and replace others with it
     }
 
     if is_float {
@@ -314,15 +314,14 @@ fn scan_next_token(
         '"' => get_strlit_data(tokens, chars, cur_line)?, // string literal/constant
         '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
             add_token(get_numlit_data(c, chars, cur_line)?)
-        } // number literal
+        } // number/float literal
         '\n' => *cur_line += 1,                           // add line
         '\r' | '\t' | ' ' => (),                          // ignore whitespace
         _ => {
-            return Err(JingoError::Unimplemented(Some(format!(
-                "token matching for `{}`",
-                c
-            ))))
-        } // not implemented more
+            return Err(JingoError::ScanningError(ScanningError::UnknownToken(
+                *cur_line, // acceptible to `*`, final error
+            )));
+        }
     }
 
     Ok(false)
