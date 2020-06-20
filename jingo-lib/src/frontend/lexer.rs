@@ -173,18 +173,27 @@ fn is_digit(c: char) -> bool {
 fn get_numlit_data(
     start_digit: char,
     chars: &mut std::iter::Peekable<std::str::Chars>,
-    cur_line: &usize,
+    cur_line: &mut usize,
 ) -> Result<Token, JingoError> {
     let mut is_float = false; // once a `.` is detected, becomes a float
     let mut content = start_digit.to_string();
 
-    for c in chars {
+    loop {
+        let c = match chars.peek() {
+            Some(x) => *x,
+            None => break,
+        };
+
         if c == '.' {
             is_float = true;
             content.push(c);
         } else if is_digit(c) {
             content.push(c);
-        } // TODO figure out \n, may have to do new parsing method and replace others with it
+        } else {
+            break;
+        }
+
+        chars.next();
     }
 
     if is_float {
