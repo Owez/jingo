@@ -89,8 +89,9 @@ pub enum ScanningError {
     /// A float was given that was not valid, possibly looking like `0...3221.`.
     InvalidFloat(usize),
 
-    /// An unknown token was given, user error.
-    UnknownToken(usize),
+    /// An unknown token was given, user error (`usize` is line num, `char` is
+    /// bad token).
+    UnknownToken(usize, char),
 
     /// See [crate::error] documentation for more on this.
     Unknown,
@@ -110,7 +111,7 @@ impl fmt::Display for ScanningError {
             ScanningError::InvalidFloat(line) => {
                 write!(f, "Invalid float found on line {} (bad float)", line)
             }
-            ScanningError::UnknownToken(line) => write!(f, "Unknown token found on line {} ", line),
+            ScanningError::UnknownToken(line, c) => write!(f, "Unknown token '{}' found on line {} ", c, line),
             ScanningError::Unknown => write!(f, "Unknown error whilst scanning"),
         }
     }

@@ -18,21 +18,19 @@ class Breakfast;
 
 --- Automatically gets passed `this`
 fun Breakfast.new(food) {
-	this.food = food;
+    this.food = food;
 }
 
 --- Prints out food for breakfeast
 fun Breakfast.print_food() {
-	print(this.food);
+    print(this.food);
 }
 
-fun main() {
-	var my_breakfast = Breakfast.new("cool_food");
+var my_breakfast = Breakfast.new("cool_food");
 
-	my_breakfast.print_food(); -- Will print `Apples`
-	my_breakfast.food = "Cherries"; -- Change `Apples` to `Cherries`
-	my_breakfast.print_food(); -- Will now print `Cherries`
-}
+my_breakfast.print_food(); -- Will print `Apples`
+my_breakfast.food = "Cherries"; -- Change `Apples` to `Cherries`
+my_breakfast.print_food(); -- Will now print `Cherries`
 ```
 
 *All above where taken from the [`examples/` directory](https://github.com/scOwez/jingo/tree/master/examples) inside of [the repository](https://github.com/scOwez/jingo/).*
