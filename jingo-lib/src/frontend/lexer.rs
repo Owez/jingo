@@ -53,6 +53,8 @@ pub enum TokenType {
     True,
     Var,
     While,
+    /// Special eof used for end of scan runs
+    Eof,
 }
 
 impl fmt::Display for TokenType {
@@ -100,6 +102,7 @@ impl fmt::Display for TokenType {
             TokenType::True => "true".to_string(),
             TokenType::Var => "var".to_string(),
             TokenType::While => "while".to_string(),
+            TokenType::Eof => "[eof]".to_string(),
         };
 
         write!(f, "{}", str_rep)
@@ -134,10 +137,9 @@ impl fmt::Display for Token {
 /// [JingoError::ScanningError]([ScanningError::UnterminatedString]) if the string
 /// was never closed.
 fn get_strlit_data(
-    tokens: &mut Vec<Token>,
     chars: &mut std::iter::Peekable<std::str::Chars>,
     cur_line: &mut usize,
-) -> Result<(), JingoError> {
+) -> Result<Token, JingoError> {
     let start_line = cur_line.clone(); // line started on
     let mut content = String::new(); // string innards
 
@@ -145,8 +147,7 @@ fn get_strlit_data(
         match chars.next() {
             Some(c) => {
                 if c == '"' {
-                    tokens.push(Token::new(TokenType::StringLit(content), start_line));
-                    return Ok(());
+                    return Ok(Token::new(TokenType::StringLit(content), start_line));
                 } else if c == '\n' {
                     *cur_line += 1;
                 }
@@ -173,7 +174,7 @@ fn get_numlit_data(
     start_digit: char,
     chars: &mut std::iter::Peekable<std::str::Chars>,
     cur_line: &usize,
-) -> Result<TokenType, JingoError> {
+) -> Result<Token, JingoError> {
     let mut is_float = false; // once a `.` is detected, becomes a float
     let mut content = start_digit.to_string();
 
@@ -188,14 +189,14 @@ fn get_numlit_data(
 
     if is_float {
         match content.parse::<f64>() {
-            Ok(f) => Ok(TokenType::FloatLit(f)),
+            Ok(f) => Ok(Token::new(TokenType::FloatLit(f), cur_line.clone())),
             Err(_) => Err(JingoError::ScanningError(ScanningError::InvalidFloat(
                 cur_line.clone(),
             ))),
         }
     } else {
         match content.parse::<i64>() {
-            Ok(f) => Ok(TokenType::NumLit(f)),
+            Ok(f) => Ok(Token::new(TokenType::NumLit(f), cur_line.clone())),
             Err(_) => Err(JingoError::ScanningError(ScanningError::InvalidNumber(
                 cur_line.clone(),
             ))),
@@ -224,21 +225,18 @@ fn get_comment_data(chars: &mut std::iter::Peekable<std::str::Chars>) -> String 
     comment
 }
 
-/// Scans single token, [usize] it provides is how many characters to skip over
-/// in a parent loop that calls this everytime after a lookahead was used.
+/// Scans single token.
 fn scan_next_token(
-    tokens: &mut Vec<Token>,
     chars: &mut std::iter::Peekable<std::str::Chars>,
     cur_line: &mut usize,
-) -> Result<bool, JingoError> {
+) -> Result<Option<Token>, JingoError> {
     let c = match chars.next() {
         Some(x) => x,
-        None => return Ok(true),
+        None => return Ok(Some(Token::new(TokenType::Eof, *cur_line))),
     };
 
-    let mut add_token = |token_type: TokenType| {
-        tokens.push(Token::new(token_type, cur_line.clone()));
-    }; // shortcut to add token
+    let add_token =
+        |token_type: TokenType| -> Option<Token> { Some(Token::new(token_type, cur_line.clone())) }; // shortcut to add token, always returns Some(token)
 
     let mut peek_next = |next_char: char| -> bool {
         if chars.peek() == Some(&next_char) {
@@ -249,7 +247,7 @@ fn scan_next_token(
         false
     }; // peeks for next item and if it exists, consumes it
 
-    match c {
+    let token = match c {
         '(' => add_token(TokenType::LeftBrak),
         ')' => add_token(TokenType::RightBrack),
         '{' => add_token(TokenType::LeftBrace),
@@ -261,70 +259,80 @@ fn scan_next_token(
         '*' => add_token(TokenType::Star),
         '+' => add_token(TokenType::Plus),
         '-' => {
+            let to_return;
+
             if peek_next('-') {
                 if peek_next('-') {
                     let char_content = get_comment_data(chars);
 
-                    add_token(TokenType::DocComment(char_content));
+                    to_return = Some(add_token(TokenType::DocComment(char_content)));
                 } else {
                     get_comment_data(chars); // remove but dont save
 
-                    add_token(TokenType::Comment);
+                    to_return = Some(add_token(TokenType::Comment));
                 }
 
                 *cur_line += 1;
             } else if peek_next('!') && peek_next('-') {
                 let char_content = get_comment_data(chars);
 
-                add_token(TokenType::HeaderComment(char_content));
+                to_return = Some(add_token(TokenType::HeaderComment(char_content)));
 
                 *cur_line += 1;
             } else {
-                add_token(TokenType::Minus)
+                to_return = Some(add_token(TokenType::Minus))
             }
+
+            to_return.unwrap()
         } // `-` for minus, `--` for comment, `---` for docstring or `-!-` for header comment
         '=' => {
             if peek_next('=') {
-                add_token(TokenType::EqualEqual);
+                add_token(TokenType::EqualEqual)
             } else {
-                add_token(TokenType::Equal);
+                add_token(TokenType::Equal)
             }
         } // `=` for equals, `==` for equal to
         '<' => {
             if peek_next('=') {
-                add_token(TokenType::LessEqual);
+                add_token(TokenType::LessEqual)
             } else {
-                add_token(TokenType::Less);
+                add_token(TokenType::Less)
             }
         } // `<` for less than, `<=` for less than or equal to
         '>' => {
             if peek_next('=') {
-                add_token(TokenType::GreaterEqual);
+                add_token(TokenType::GreaterEqual)
             } else {
-                add_token(TokenType::Greater);
+                add_token(TokenType::Greater)
             }
         } // `>` for greater than, `>=` for greater than or equal to
         '!' => {
             if peek_next('=') {
-                add_token(TokenType::NotEqual);
+                add_token(TokenType::NotEqual)
             } else {
-                add_token(TokenType::Not);
+                add_token(TokenType::Not)
             }
         } // `!` for not, `!=` for not equal
-        '"' => get_strlit_data(tokens, chars, cur_line)?, // string literal/constant
-        '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-            add_token(get_numlit_data(c, chars, cur_line)?)
-        } // number/float literal
-        '\n' => *cur_line += 1,                           // add line
-        '\r' | '\t' | ' ' => (),                          // ignore whitespace
-        _ => {
-            return Err(JingoError::ScanningError(ScanningError::UnknownToken(
-                *cur_line, // acceptible to `*`, final error
-            )));
+        '"' => Some(get_strlit_data(chars, cur_line)?), // string literal/constant
+        '\n' => {
+            *cur_line += 1;
+            None
+        } // add line
+        '\r' | '\t' | ' ' => None,                      // ignore whitespace
+        c => {
+            if is_digit(c) {
+                // number/float literal
+                Some(get_numlit_data(c, chars, cur_line)?)
+            } else {
+                // unknown
+                return Err(JingoError::ScanningError(ScanningError::UnknownToken(
+                    *cur_line, // acceptible to `*`, final error
+                )));
+            }
         }
-    }
+    };
 
-    Ok(false)
+    Ok(token)
 }
 
 /// Lexes code into [Vec]<[Token]> or provides an error in the form of [JingoError].
@@ -348,8 +356,14 @@ pub fn scan_code(code: &str) -> Result<Vec<Token>, JingoError> {
     let mut chars = code.chars().peekable();
 
     loop {
-        if scan_next_token(&mut tokens, &mut chars, &mut cur_line)? {
-            break;
+        let scan = scan_next_token(&mut chars, &mut cur_line)?;
+
+        match scan {
+            Some(token) => match token.token_type {
+                TokenType::Eof => break, // eof indicator
+                _ => tokens.push(token), // normal token
+            },
+            _ => (), // whitespace
         }
     }
 
