@@ -115,7 +115,7 @@ impl fmt::Display for ScanningError {
                 write!(f, "Invalid float found on line {} (bad float)", line)
             }
             ScanningError::UnknownToken(line, c) => write!(f, "Unknown token '{}' found on line {} ", c, line),
-            ScanningError::UnknownEscape(line, c) => write!(f, "Unknown escape '{}' found on line {}", c, line),
+            ScanningError::UnknownEscape(line, c) => write!(f, "Unknown escape sequence '\\{}' found on line {}", c, line),
             ScanningError::Unknown => write!(f, "Unknown error whilst scanning"),
         }
     }
