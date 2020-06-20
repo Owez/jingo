@@ -234,3 +234,82 @@ fn numbers_newlines() {
         ])
     )
 }
+
+/// Basic string functionality test.
+#[test]
+fn strings() {
+    // empty string
+    assert_eq!(
+        scan_code("\"\""),
+        Ok(vec![Token::new(
+            TokenType::StringLit(String::new()),
+            DEFAULT_LINE
+        )])
+    );
+
+    // basic "hi there"
+    assert_eq!(
+        scan_code("\"Hi there\""),
+        Ok(vec![Token::new(
+            TokenType::StringLit("Hi there".to_string()),
+            DEFAULT_LINE
+        )])
+    );
+}
+
+/// Tests valid string escape sequences.
+#[test]
+fn strings_escapes() {
+    // newline
+    assert_eq!(
+        scan_code("\"\n\""),
+        Ok(vec![Token::new(
+            TokenType::StringLit("\n".to_string()),
+            DEFAULT_LINE
+        )])
+    );
+
+    // tab
+    assert_eq!(
+        scan_code("\"\t\""),
+        Ok(vec![Token::new(
+            TokenType::StringLit("\t".to_string()),
+            DEFAULT_LINE
+        )])
+    );
+
+    // `\r`
+    assert_eq!(
+        scan_code("\"\r\""),
+        Ok(vec![Token::new(
+            TokenType::StringLit("\r".to_string()),
+            DEFAULT_LINE
+        )])
+    );
+
+    // multiple \n\n\t
+    assert_eq!(
+        scan_code("\"\n\n\t\""),
+        Ok(vec![Token::new(
+            TokenType::StringLit("\n\n\t".to_string()),
+            DEFAULT_LINE
+        )])
+    );
+}
+
+/// Tests specifically [backslash][quote] (e.g. `\"`) inside a string for common
+/// edge case. Gets very ugly with rust, for example `\"\\\"\"` in rust is really
+/// `"\""` in normal text
+#[test]
+fn strings_escapes_string() {
+    assert_eq!(
+        scan_code("\"\\\"\""),
+        Ok(vec![Token::new(
+            TokenType::StringLit("\"".to_string()),
+            DEFAULT_LINE
+        )])
+    );
+
+    scan_code("\"\\\"\\\"\"").unwrap(); // normal: `"\"\""`
+    scan_code("\"\\\\\\\"\"").unwrap(); // normal: `"\\\""` (i think)
+}
