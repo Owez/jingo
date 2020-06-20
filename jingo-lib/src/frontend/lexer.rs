@@ -299,8 +299,9 @@ fn get_comment_data(chars: &mut std::iter::Peekable<std::str::Chars>) -> String 
     comment
 }
 
-/// Scans single token.
-fn scan_next_token(
+/// Gets next token in line of peekable `chars` (as this lexer is lookahead, it
+/// needs `chars.peekable()` enabled).
+pub fn scan_next_token(
     chars: &mut std::iter::Peekable<std::str::Chars>,
     cur_line: &mut usize,
 ) -> Result<Option<Token>, JingoError> {

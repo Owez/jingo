@@ -6,12 +6,12 @@ class Breakfast;
 
 --- Automatically gets passed `this`
 fun Breakfast.new(food) {
-	this.food = food;
+    this.food = food;
 }
 
 --- Prints out food for breakfeast
 fun Breakfast.print_food() {
-	print(this.food);
+    print(this.food);
 }
 
 var my_breakfast = Breakfast.new("cool_food");
