@@ -402,7 +402,7 @@ fn scan_next_token(
             } else {
                 // unknown
                 return Err(JingoError::ScanningError(ScanningError::UnknownToken(
-                    *cur_line, // acceptible to `*`, final error
+                    *cur_line, c, // acceptible to `*`, final error
                 )));
             }
         }
