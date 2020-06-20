@@ -93,6 +93,9 @@ pub enum ScanningError {
     /// bad token).
     UnknownToken(usize, char),
 
+    /// Unknown escape sequence (e.g. `\9` isn't an escape sequence like `\n`).
+    UnknownEscape(usize, char),
+
     /// See [crate::error] documentation for more on this.
     Unknown,
 }
@@ -112,6 +115,7 @@ impl fmt::Display for ScanningError {
                 write!(f, "Invalid float found on line {} (bad float)", line)
             }
             ScanningError::UnknownToken(line, c) => write!(f, "Unknown token '{}' found on line {} ", c, line),
+            ScanningError::UnknownEscape(line, c) => write!(f, "Unknown escape '{}' found on line {}", c, line),
             ScanningError::Unknown => write!(f, "Unknown error whilst scanning"),
         }
     }

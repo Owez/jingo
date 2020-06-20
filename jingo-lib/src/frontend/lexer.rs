@@ -172,35 +172,99 @@ fn is_alphanumeric(c: char) -> bool {
     is_digit(c) || is_alpha(c)
 }
 
-/// Gets a string literal by peeking until next `"` is found or returns
-/// [JingoError::ScanningError]([ScanningError::UnterminatedString]) if the string
-/// was never closed.
+/// Gets string type for jingo, parsing any escapes it finds along the way.
 fn get_strlit_data(
     chars: &mut std::iter::Peekable<std::str::Chars>,
     cur_line: &mut usize,
 ) -> Result<Token, JingoError> {
-    let start_line = cur_line.clone(); // line started on
-    let mut content = String::new(); // string innards
+    let start_line = cur_line.clone();
+    let mut content = String::new();
+
+    let unterminated_str_err =
+        JingoError::ScanningError(ScanningError::UnterminatedString(start_line));
 
     loop {
-        match chars.next() {
-            Some(c) => {
-                if c == '"' {
-                    return Ok(Token::new(TokenType::StringLit(content), start_line));
-                } else if c == '\n' {
-                    *cur_line += 1;
-                }
+        let c = match chars.next() {
+            Some(x) => x,
+            None => return Err(unterminated_str_err),
+        };
 
-                content.push(c);
+        if c != '\\' {
+            if c == '\n' {
+                *cur_line += 1;
+            } else if c == '"' {
+                break;
             }
-            None => {
-                return Err(JingoError::ScanningError(
-                    ScanningError::UnterminatedString(start_line),
-                ))
-            }
+
+            content.push(c);
+            continue;
+        }
+
+        match chars.next() {
+            Some(x) => match x {
+                '\\' => content.push('\\'),
+                '"' => content.push('"'),
+                'n' => content.push('\n'),
+                'r' => content.push('\r'),
+                't' => content.push('\t'),
+                c => {
+                    return Err(JingoError::ScanningError(ScanningError::UnknownEscape(
+                        start_line, c,
+                    )))
+                }
+            },
+            None => return Err(unterminated_str_err),
         }
     }
+
+    Ok(Token::new(TokenType::StringLit(content), start_line))
 }
+
+// /// Gets a string literal by peeking until next `"` is found or returns
+// /// [JingoError::ScanningError]([ScanningError::UnterminatedString]) if the string
+// /// was never closed.
+// fn get_strlit_data(
+//     chars: &mut std::iter::Peekable<std::str::Chars>,
+//     cur_line: &mut usize,
+// ) -> Result<Token, JingoError> {
+//     let start_line = cur_line.clone(); // line started on
+//     let mut content = String::new(); // string innards
+//     let mut is_special = false;
+
+//     loop {
+//         if is_special {
+//             content.push('\\'); // post-humanously push backslash
+//             is_special = false;
+//         }
+
+//         match chars.next() {
+//             Some(c) => {
+//                 match c {
+//                     '"' => {
+//                         if is_special {
+//                             is_special = false;
+//                         } else {
+//                             return Ok(Token::new(TokenType::StringLit(content), start_line));
+//                         }
+//                     }
+//                     '\n' => *cur_line += 1,
+//                     '\\' => {
+//                         is_special = !is_special;
+//                         continue;
+//                     }
+//                     _ => (),
+//                 }
+
+//                 content.push(c);
+//             }
+//             None => {
+//                 return Err(JingoError::ScanningError(
+//                     ScanningError::UnterminatedString(start_line),
+//                 ))
+//             }
+//         }
+//     }
+// }
 
 /// Similar to [get_strlit_data] but for number literals, mapping to
 /// [TokenType::NumLit] or [TokenType::FloatLit] if it has a `.`.
