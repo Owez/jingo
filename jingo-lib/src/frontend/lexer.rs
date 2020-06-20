@@ -133,6 +133,45 @@ impl fmt::Display for Token {
     }
 }
 
+/// Checks if char is a digit (0-9).
+fn is_digit(c: char) -> bool {
+    c >= '0' && c <= '9'
+}
+
+/// Similar to [is_digit] but checks if the character is an underscore or in the
+/// alphabet.
+fn is_alpha(c: char) -> bool {
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+/// Matches keywords like `and` to [TokenType::And] for easy keyword recognition
+/// outside of this lexer.
+pub fn keyword_match(content: &str) -> Option<TokenType> {
+    match content {
+        "and" => Some(TokenType::And),
+        "class" => Some(TokenType::Class),
+        "else" => Some(TokenType::Else),
+        "false" => Some(TokenType::False),
+        "fun" => Some(TokenType::Func),
+        "for" => Some(TokenType::For),
+        "if" => Some(TokenType::If),
+        "null" => Some(TokenType::Null),
+        "return" => Some(TokenType::Return),
+        "super" => Some(TokenType::Super),
+        "this" => Some(TokenType::This),
+        "true" => Some(TokenType::True),
+        "var" => Some(TokenType::Var),
+        "while" => Some(TokenType::While),
+        _ => None,
+    }
+}
+
+/// Combines [is_digit] and [is_alpha] to check if a char is a digit, in the
+/// alphabet or is an `_`.
+fn is_alphanumeric(c: char) -> bool {
+    is_digit(c) || is_alpha(c)
+}
+
 /// Gets a string literal by peeking until next `"` is found or returns
 /// [JingoError::ScanningError]([ScanningError::UnterminatedString]) if the string
 /// was never closed.
@@ -163,17 +202,12 @@ fn get_strlit_data(
     }
 }
 
-/// Checks if char is a digit (0-9).
-fn is_digit(c: char) -> bool {
-    c >= '0' && c <= '9'
-}
-
 /// Similar to [get_strlit_data] but for number literals, mapping to
 /// [TokenType::NumLit] or [TokenType::FloatLit] if it has a `.`.
 fn get_numlit_data(
     start_digit: char,
     chars: &mut std::iter::Peekable<std::str::Chars>,
-    cur_line: &mut usize,
+    cur_line: &usize,
 ) -> Result<Token, JingoError> {
     let mut is_float = false; // once a `.` is detected, becomes a float
     let mut content = start_digit.to_string();
@@ -210,6 +244,37 @@ fn get_numlit_data(
                 cur_line.clone(),
             ))),
         }
+    }
+}
+
+/// Gets identifier or keyword token from given chars and a `start_char` (due to
+/// how lexing works).
+fn get_identifier_kw_data(
+    start_char: char,
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    cur_line: &usize,
+) -> Result<Token, JingoError> {
+    let mut content = start_char.to_string();
+
+    loop {
+        let c = match chars.peek() {
+            Some(x) => *x,
+            None => break,
+        };
+
+        if is_alphanumeric(c) {
+            content.push(c);
+        } else {
+            break;
+        }
+
+        chars.next();
+    }
+
+    // match to an existing keyword, if not found make it an identifier
+    match keyword_match(&content[..]) {
+        Some(x) => Ok(Token::new(x, cur_line.clone())),
+        None => Ok(Token::new(TokenType::Identifier(content), cur_line.clone())),
     }
 }
 
@@ -332,6 +397,8 @@ fn scan_next_token(
             if is_digit(c) {
                 // number/float literal
                 Some(get_numlit_data(c, chars, cur_line)?)
+            } else if is_alpha(c) {
+                Some(get_identifier_kw_data(c, chars, cur_line)?)
             } else {
                 // unknown
                 return Err(JingoError::ScanningError(ScanningError::UnknownToken(

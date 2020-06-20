@@ -36,7 +36,7 @@ pub fn compile(code: &str, _output: Option<PathBuf>) -> Result<(), JingoError> {
     let tokens = frontend::lexer::scan_code(code)?;
 
     for token in tokens {
-        println!("{}", token);
+        println!("{} ({:?})", token, token.token_type);
     }
 
     Ok(())
