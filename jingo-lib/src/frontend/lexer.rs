@@ -1,5 +1,4 @@
-//! Self-contained lexer for the Jingo compiler. See [scan_code] for main
-//! lexing capabilities.
+//! Lexer for the Jingo compiler. See [scan_code] for main lexing capabilities.
 
 use crate::error::{JingoError, ScanningError};
 use std::fmt;

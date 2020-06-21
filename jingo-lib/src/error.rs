@@ -28,6 +28,9 @@ pub enum JingoError {
     /// Downstream error when scanning, see [ScanningError] for more infomation.
     ScanningError(ScanningError),
 
+    /// Downstream error when parsing, see [ParsingError] for more infomation.
+    ParsingError(ParsingError),
+
     /// A part of the compiler is unfinished that the user tried to access with
     /// some extra info in the form of an optional [String] appended onto the end
     /// in brackets.
@@ -48,6 +51,8 @@ impl fmt::Display for JingoError {
     /// the `match self` statement.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            JingoError::ScanningError(e) => write!(f, "{}", e),
+            JingoError::ParsingError(e) => write!(f, "{}", e),
             JingoError::Unknown => write!(f, "General unknown error"),
             JingoError::Unimplemented(info) => match info {
                 Some(x) => write!(
@@ -57,7 +62,6 @@ impl fmt::Display for JingoError {
                 ),
                 None => write!(f, "A part of the compiler accessed has not yet been made"),
             },
-            JingoError::ScanningError(e) => write!(f, "{}", e), // other errors
         }
     }
 }
@@ -114,9 +118,31 @@ impl fmt::Display for ScanningError {
             ScanningError::InvalidFloat(line) => {
                 write!(f, "Invalid float found on line {} (bad float)", line)
             }
-            ScanningError::UnknownToken(line, c) => write!(f, "Unknown token '{}' found on line {} ", c, line),
-            ScanningError::UnknownEscape(line, c) => write!(f, "Unknown escape sequence '\\{}' found on line {}", c, line),
+            ScanningError::UnknownToken(line, c) => {
+                write!(f, "Unknown token '{}' found on line {} ", c, line)
+            }
+            ScanningError::UnknownEscape(line, c) => write!(
+                f,
+                "Unknown escape sequence '\\{}' found on line {}",
+                c, line
+            ),
             ScanningError::Unknown => write!(f, "Unknown error whilst scanning"),
+        }
+    }
+}
+
+/// Errors regarding the parsing flow inside of [crate::frontend::parser] (also
+/// linked to [crate::frontend::ast]).
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub enum ParsingError {
+    /// See [crate::error] documentation for more on this.
+    Unknown,
+}
+
+impl fmt::Display for ParsingError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParsingError::Unknown => write!(f, "Unknown error whilst parsing"),
         }
     }
 }
