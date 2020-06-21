@@ -1,4 +1,4 @@
-//! Lexer for the Jingo compiler. See [scan_code] for main lexing capabilities.
+//! Lexer for Jingo. See [scan_code] for main lexing capabilities.
 
 use crate::error::{JingoError, ScanningError};
 use std::fmt;
