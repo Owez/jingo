@@ -313,3 +313,16 @@ fn strings_escapes_string() {
     scan_code("\"\\\"\\\"\"").unwrap(); // normal: `"\"\""`
     scan_code("\"\\\\\\\"\"").unwrap(); // normal: `"\\\""` (i think)
 }
+
+/// Tests that some actual jingo lexes correctly without erroring.
+#[test]
+fn full_functionality() {
+    // basic vars
+    scan_code("var x = 3343.32;\nvar y = (x + 5555);").unwrap();
+    
+    // functions
+    scan_code("fn my_func(i) { return i * 4 / 2 }\nprint my_func(555);").unwrap();
+
+    // var strings
+    scan_code("var my_str = \"hello world\\ntis me, the tester!\"; print my_str;").unwrap();
+}

@@ -155,6 +155,8 @@ pub fn keyword_match(content: &str) -> Option<TokenType> {
         "for" => Some(TokenType::For),
         "if" => Some(TokenType::If),
         "null" => Some(TokenType::Null),
+        "or" => Some(TokenType::Or),
+        "print" => Some(TokenType::Print),
         "return" => Some(TokenType::Return),
         "super" => Some(TokenType::Super),
         "this" => Some(TokenType::This),
@@ -218,52 +220,6 @@ fn get_strlit_data(
 
     Ok(Token::new(TokenType::StringLit(content), start_line))
 }
-
-// /// Gets a string literal by peeking until next `"` is found or returns
-// /// [JingoError::ScanningError]([ScanningError::UnterminatedString]) if the string
-// /// was never closed.
-// fn get_strlit_data(
-//     chars: &mut std::iter::Peekable<std::str::Chars>,
-//     cur_line: &mut usize,
-// ) -> Result<Token, JingoError> {
-//     let start_line = cur_line.clone(); // line started on
-//     let mut content = String::new(); // string innards
-//     let mut is_special = false;
-
-//     loop {
-//         if is_special {
-//             content.push('\\'); // post-humanously push backslash
-//             is_special = false;
-//         }
-
-//         match chars.next() {
-//             Some(c) => {
-//                 match c {
-//                     '"' => {
-//                         if is_special {
-//                             is_special = false;
-//                         } else {
-//                             return Ok(Token::new(TokenType::StringLit(content), start_line));
-//                         }
-//                     }
-//                     '\n' => *cur_line += 1,
-//                     '\\' => {
-//                         is_special = !is_special;
-//                         continue;
-//                     }
-//                     _ => (),
-//                 }
-
-//                 content.push(c);
-//             }
-//             None => {
-//                 return Err(JingoError::ScanningError(
-//                     ScanningError::UnterminatedString(start_line),
-//                 ))
-//             }
-//         }
-//     }
-// }
 
 /// Similar to [get_strlit_data] but for number literals, mapping to
 /// [TokenType::NumLit] or [TokenType::FloatLit] if it has a `.`.
