@@ -53,7 +53,6 @@ impl fmt::Display for JingoError {
         match self {
             JingoError::ScanningError(e) => write!(f, "{}", e),
             JingoError::ParsingError(e) => write!(f, "{}", e),
-            JingoError::Unknown => write!(f, "General unknown error"),
             JingoError::Unimplemented(info) => match info {
                 Some(x) => write!(
                     f,
@@ -62,6 +61,7 @@ impl fmt::Display for JingoError {
                 ),
                 None => write!(f, "A part of the compiler accessed has not yet been made"),
             },
+            JingoError::Unknown => write!(f, "General unknown error"),
         }
     }
 }
