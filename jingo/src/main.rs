@@ -18,7 +18,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-/// Wraps around the [jingo_lib::run] function and displays any panics in userland.
+/// Wraps around the [jingo_lib::compile] function and displays any panics in userland.
 ///
 /// This function converts [String] to &[str] due to the nature of cli and path
 /// imports both using [String] but `jingo-lib` not.
