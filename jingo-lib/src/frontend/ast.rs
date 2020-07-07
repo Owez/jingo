@@ -111,13 +111,13 @@ pub enum Constant {
 }
 
 /// A function signature and body.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```jingo
 /// fun my_function(parameter, other_param) {
 ///     -- this is the body of the function
-/// 
+///
 ///     return parameter * other_param; -- multiply and return
 /// }
 /// ```
@@ -142,5 +142,5 @@ pub struct Variable {
     pub ident: String,
 
     /// The body of the variable to be evaluated at a later date
-    pub body: Box<ExpressionNode>
+    pub body: Box<ExpressionNode>,
 }
