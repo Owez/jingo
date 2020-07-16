@@ -25,7 +25,7 @@ use std::path::PathBuf;
 fn run_compiler(code: String, output: Option<PathBuf>) {
     match compile(&code, output) {
         Ok(_) => log::success("Compiler finished successfully".to_string()),
-        Err(e) => log::fatal(e.to_string()),
+        Err(e) => log::fatal(log::get_err_msg(e)),
     };
 }
 
