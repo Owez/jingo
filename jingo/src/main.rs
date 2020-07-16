@@ -32,7 +32,7 @@ fn run_compiler(code: String, output: Option<PathBuf>) {
 /// Gets content of given path and handles errors in a user-friendly manner.
 fn read_path(path: PathBuf, file_name: &str) -> String {
     if !path.exists() {
-        log::fatal(format!("The file {} does not exist", file_name.bold()))
+        log::fatal(format!("Jingo file {} does not exist", file_name.dimmed()))
     }
 
     let mut file = match File::open(path.clone()) {
@@ -47,14 +47,14 @@ fn read_path(path: PathBuf, file_name: &str) -> String {
         Ok(_) => (),
         Err(_) => log::fatal(format!(
             "Could not read {}, check file formatting",
-            file_name.bold()
+            file_name.dimmed()
         )),
     };
 
     if path.extension() == Some(OsStr::new("jingo")) {
         log::warn(format!(
             "File {} is advised to use {} instead of the {} extension",
-            file_name.bold(),
+            file_name.dimmed(),
             ".jno".bold(),
             ".jingo".bold()
         ));
@@ -63,7 +63,7 @@ fn read_path(path: PathBuf, file_name: &str) -> String {
     if contents.is_empty() {
         log::warn(format!(
             "File {} is empty so nothing will happen",
-            file_name.bold()
+            file_name.dimmed()
         ))
     }
 
@@ -85,7 +85,7 @@ fn main() {
         }
         CLIResult::File(path, output) => {
             let file_name = path.file_name().unwrap().to_str().unwrap(); // thanks rust..
-            log::info(format!("Compiling {}..", file_name.bold()));
+            log::info(format!("Compiling {}..", file_name.dimmed()));
 
             let code = read_path(path.clone(), file_name);
 

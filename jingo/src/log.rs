@@ -27,26 +27,36 @@ pub fn warn(message: String) {
     eprintln!("{} {}", "Warning:".yellow(), message);
 }
 
+/// Returns a bolded `line [line]` like `line 32` as a [String] using the
+/// [colored] crate
+fn boldline(line: usize) -> colored::ColoredString {
+    format!("line {}", line).bold()
+}
+
 /// Downstream helping fun for [get_err_msg], makes error messages for lexing
 /// errors
 fn get_scan_error_msg(error: ScanningError) -> String {
     match error {
         ScanningError::UnterminatedString(line) => format!(
-            "A string starting on line {} was opened but never closed (unterminated string)",
-            line
+            "A string starting on {} was opened but never closed (unterminated string)",
+            boldline(line)
         ),
         ScanningError::InvalidNumber(line) => {
-            format!("Invalid number found on line {} (bad int)", line)
+            format!("Invalid number found on {} (bad int)", boldline(line))
         }
         ScanningError::InvalidFloat(line) => {
-            format!("Invalid float found on line {} (bad float)", line)
+            format!("Invalid float found on {} (bad float)", boldline(line))
         }
-        ScanningError::UnknownToken(line, c) => {
-            format!("Unknown token '{}' found on line {} ", c, line)
-        }
-        ScanningError::UnknownEscape(line, c) => {
-            format!("Unknown escape sequence '\\{}' found on line {}", c, line)
-        }
+        ScanningError::UnknownToken(line, c) => format!(
+            "Unknown token {} found on {} ",
+            format!("`{}`", c).dimmed(),
+            boldline(line)
+        ),
+        ScanningError::UnknownEscape(line, c) => format!(
+            "Unknown escape sequence {} found on {}",
+            format!("`\\{}`", c).dimmed(),
+            boldline(line)
+        ),
         ScanningError::Unknown => String::from("Unknown error whilst scanning"),
     }
 }

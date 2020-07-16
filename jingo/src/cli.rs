@@ -59,7 +59,7 @@ fn show_version() -> CLIResult {
         }
         None => CLIResult::Fatal(format!(
             "Could not fetch version, please ensure {} is set",
-            "CARGO_PKG_VERSION".bold()
+            "CARGO_PKG_VERSION".dimmed()
         )),
     }
 }
