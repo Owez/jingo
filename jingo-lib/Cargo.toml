@@ -2,6 +2,7 @@
 name = "jingo-lib"
 description = "The central library for Jingo, containing the core of the compiler."
 version = "0.1.0"
+readme = "README.md"
 repository = "https://github.com/scOwez/jingo"
 license = "MIT"
 authors = ["Owez <root@ogriffiths.com>"]
