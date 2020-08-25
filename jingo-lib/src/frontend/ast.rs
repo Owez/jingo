@@ -8,9 +8,9 @@
 pub enum StatementNode {
     Fun(Fun),
     WhileLoop(WhileLoop),
-    ForLoop(ForLoop),
+    // ForLoop(ForLoop),
     Variable(Variable),
-    Class(Class),
+    // Class(Class),
     If(If),
     /// A simple print statement, similar in style as a [Return] statement but prints
     /// the expression given.
@@ -64,9 +64,9 @@ pub enum BinOp {
     /// Modulo, `%`
     Mod,
     /// Equal to, `==`
-    EqualTo,
+    EqualEqual,
     /// Not equal to, `=!`
-    NotEqualTo,
+    NotEqual,
     /// Greater than, `>`
     GreaterThan,
     /// Greater than or equal, `>=`
