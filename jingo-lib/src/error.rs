@@ -25,10 +25,10 @@ use std::fmt;
 /// represented as a concise string with [fmt::Display].
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum JingoError {
-    /// Downstream error when scanning, see [ScanningError] for more infomation.
+    /// Upstream error whilst scanning, see [ScanningError] for more infomation.
     ScanningError(ScanningError),
 
-    /// Downstream error when parsing, see [ParsingError] for more infomation.
+    /// Upstream error whilst parsing, see [ParsingError] for more infomation.
     ParsingError(ParsingError),
 
     /// A part of the compiler is unfinished that the user tried to access with
