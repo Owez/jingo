@@ -31,14 +31,14 @@ Usage:
     ./jingo <file>
     ./jingo <file> (-o | --output) <output>
     ./jingo (-d | --direct) <code>
-    ./jingo -h | --help
-    ./jingo -v | --version
+    ./jingo (-h | --help)
+    ./jingo (-v | --version)
 
 Options:
-    -h --help       Show this screen.
-    -v --version    Shows compiler version.
-    -d --direct      Feed direct Zypo code into compiler.
-    -o --output     Output path for binary.";
+    -h, --help       Show this screen.
+    -v, --version    Shows compiler version.
+    -d, --direct      Feed direct Zypo code into compiler.
+    -o, --output     Output path for binary.";
 
     if error {
         eprintln!("{}", help_msg);
