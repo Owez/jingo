@@ -10,7 +10,7 @@
 mod cli;
 mod log;
 
-use cli::{parse_args, CLIResult};
+use cli::{parse_args, CLIResult, CLIStage};
 use colored::*;
 use jingo_lib::compile;
 use std::ffi::OsStr;
@@ -18,15 +18,55 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-/// Wraps around the [jingo_lib::compile] function and displays any panics in userland.
-///
-/// This function converts [String] to &[str] due to the nature of cli and path
-/// imports both using [String] but `jingo-lib` not.
-fn run_compiler(code: String, output: Option<PathBuf>) {
-    match compile(&code, output) {
-        Ok(_) => log::success("Compiler finished successfully".to_string()),
-        Err(e) => log::fatal(e.to_string()),
-    };
+/// Metadata structure to hand off info for downstream compilation tasks after
+/// cleaning CLI results
+struct CompileInfo {
+    /// Code to compile
+    code: String,
+    /// Optional output path
+    output: Option<PathBuf>,
+    /// Stage to compile to
+    stage: CLIStage,
+}
+
+impl CompileInfo {
+    /// Matches [CompileInfo::stage] to a relevant compilation stage
+    /// 
+    /// Stages that may be used:
+    /// 
+    /// - [CompileInfo::run_full]
+    /// - [CompileInfo::run_scanner]
+    /// - [CompileInfo::run_parser]
+    fn compile(&self) {
+        match self.stage {
+            CLIStage::Normal => self.run_full(),
+            CLIStage::Scanner => self.run_scanner(),
+            CLIStage::Parser => self.run_parser(),
+        }
+    }
+
+    /// Wraps around the [jingo_lib::compile] function and displays any panics
+    /// in userland. This is the "normal" run function compared to others that
+    /// stop at a defined compilation stage
+    fn run_full(&self) {
+        match compile(&self.code, self.output.clone()) {
+            // TODO: move compile() to lexer & replace with `unimplemented!()`
+            Ok(_) => log::success("Compiler finished successfully".to_string()),
+            Err(e) => log::fatal(e.to_string()),
+        };
+    }
+
+    /// Compiles code to the lexer/scanner phase only, similar to [run_full] but more
+    /// limited
+    fn run_scanner(&self) {
+        unimplemented!();
+    }
+
+    /// Compiles code to the parser phase only. Does not show stdout for lexing, only
+    /// resulting AST (if parsing was successful)
+    fn run_parser(&self) {
+        unimplemented!();
+    }
 }
 
 /// Gets content of given path and handles errors in a user-friendly manner.
@@ -71,7 +111,9 @@ fn read_path(path: PathBuf, file_name: &str) -> String {
 }
 
 fn main() {
-    match parse_args() {
+    let parsed_args = parse_args();
+
+    match parsed_args.result {
         CLIResult::Fatal(e) => log::fatal(e),
         CLIResult::Direct(code, output) => {
             log::info("Compiling direct code..".to_string());
@@ -81,7 +123,11 @@ fn main() {
                 log::warn("No code given, nothing will happen".to_string());
             }
 
-            run_compiler(code, output);
+            CompileInfo {
+                code: code,
+                output: output,
+                stage: parsed_args.stage,
+            }.compile(); // TODO: tidy up
         }
         CLIResult::File(path, output) => {
             let file_name = path.file_name().unwrap().to_str().unwrap(); // thanks rust..
@@ -89,7 +135,11 @@ fn main() {
 
             let code = read_path(path.clone(), file_name);
 
-            run_compiler(code, output);
+            CompileInfo {
+                code: code,
+                output: output,
+                stage: parsed_args.stage,
+            }.compile(); // TODO: tidy up
         }
         _ => (),
     }

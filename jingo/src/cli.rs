@@ -23,6 +23,41 @@ pub enum CLIResult {
     Handled,
 }
 
+/// The stage of compilation user would like (made into this enum by figuring out
+/// flags automatically)
+pub enum CLIStage {
+    /// Standard, full compilation from beginning to end, as much as the compiler
+    /// can offer without major time loss with over-optimisations
+    Normal,
+
+    /// Scanner/lexing only, printing each lex result to stdout
+    Scanner,
+
+    /// Hidden lexing process then stdout for all parsed AST
+    Parser,
+}
+
+/// Encompasses [CLIStage] and [CLIResult] to be used in returns from CLI-related
+/// tasks
+pub struct CLI {
+    /// Compilation stage requested
+    pub stage: CLIStage,
+
+    /// Result of overall cli, to be used in conjunction with [CLI::stage] if
+    /// it's not an error
+    pub result: CLIResult,
+}
+
+impl CLI {
+    /// Shortcut to creating a CLI with a simple [CLIStage::Normal] stage
+    pub fn norm(result: CLIResult) -> Self {
+        Self {
+            stage: CLIStage::Normal,
+            result: result,
+        }
+    }
+}
+
 /// Prints help info, `error` is for if it should display to stderr (true) or just stdout (false).
 fn show_help(error: bool) -> CLIResult {
     let help_msg = "A lightweight, high-level language designed to be sleek and robust.
@@ -65,17 +100,19 @@ fn show_version() -> CLIResult {
 }
 
 /// Parses arguments given in by user and returns a [CLIResult].
-pub fn parse_args() -> CLIResult {
+pub fn parse_args() -> CLI {
     if env::args().len() == 1 {
-        return show_help(true);
+        return CLI::norm(show_help(true));
     }
 
     let mut direct_buf = String::new(); // buffer for direct
     let mut output_buf = String::new(); // buffer for output
     let mut file_buf = String::new(); // buffer for file
 
-    let mut direct_flag = false; // If flag was given for a [CLIResult::Direct]
-    let mut output_flag = false; // If flag was given for -o/--output
+    let mut direct_arg = false; // If arg was given for a [CLIResult::Direct]
+    let mut output_arg = false; // If arg was given for -o/--output
+
+    let mut cli_stage = CLIStage::Normal; // stage of cli (defaults to [CLIStage::Normal])
 
     for (ind, argument) in env::args().enumerate() {
         if ind == 0 {
@@ -83,28 +120,32 @@ pub fn parse_args() -> CLIResult {
         } else if ind == 1 && !argument.starts_with('-') {
             file_buf = argument;
         } else if &argument == "-h" || &argument == "--help" {
-            return show_help(false);
+            return CLI::norm(show_help(false));
         } else if &argument == "-v" || &argument == "--version" {
-            return show_version();
+            return CLI::norm(show_version());
         } else if &argument == "-o" || &argument == "--output" {
-            output_flag = true;
+            output_arg = true;
         } else if &argument == "-d" || &argument == "--direct" {
-            direct_flag = true;
-        } else if direct_flag {
-            direct_flag = false;
+            direct_arg = true;
+        } else if direct_arg {
+            direct_arg = false;
 
             if direct_buf.is_empty() {
                 direct_buf = argument;
             } else {
-                return CLIResult::Fatal("Please only provide 1 direct argument".to_string());
+                return CLI::norm(CLIResult::Fatal(
+                    "Please only provide 1 direct argument".to_string(),
+                ));
             }
-        } else if output_flag {
-            output_flag = false;
+        } else if output_arg {
+            output_arg = false;
 
             if output_buf.is_empty() {
                 output_buf = argument;
             } else {
-                return CLIResult::Fatal("Please only provide 1 output location".to_string());
+                return CLI::norm(CLIResult::Fatal(
+                    "Please only provide 1 output location".to_string(),
+                ));
             }
         }
     }
@@ -115,7 +156,7 @@ pub fn parse_args() -> CLIResult {
         Some(PathBuf::from(output_buf))
     };
 
-    if !direct_buf.is_empty() {
+    let cli_result = if !direct_buf.is_empty() {
         CLIResult::Direct(direct_buf, final_output)
     } else if !file_buf.is_empty() {
         CLIResult::File(PathBuf::from(file_buf), final_output)
@@ -125,5 +166,10 @@ pub fn parse_args() -> CLIResult {
             "<file>".bold(),
             "(-d | --direct) <code>".bold()
         ))
+    };
+
+    CLI {
+        stage: cli_stage,
+        result: cli_result,
     }
 }
