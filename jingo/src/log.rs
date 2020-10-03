@@ -7,36 +7,36 @@ use std::process;
 
 /// Displays a red error message for anything. If you want one with a line
 /// number, see [error_line].
-pub fn error(message: String) {
-    eprintln!("{} {}", "Error:".red(), message);
+pub fn error<T: Into<String>>(message: T) {
+    eprintln!("{} {}", "Error:".red(), message.into());
 }
 
 /// Displays a red fatal error message for anything then exists with code `1`.
 /// If you want one with a line number, see [error_line].
-pub fn fatal(message: String) -> ! {
-    eprintln!("{} {}", "Fatal:".red(), message);
+pub fn fatal<T: Into<String>>(message: T) -> ! {
+    eprintln!("{} {}", "Fatal:".red(), message.into());
     process::exit(1)
 }
 
 /// Displays a red error message for a specific line.
-pub fn error_line(line: i32, message: String) {
+pub fn error_line<T: Into<String>>(line: i32, message: T) {
     let error_header = format!("Error [line {}]:", line);
 
-    eprintln!("{} {}", error_header.red(), message);
+    eprintln!("{} {}", error_header.red(), message.into());
 }
 
 /// Displays a simple blue info message.
-pub fn info(message: String) {
-    println!("{} {}", "Info:".blue(), message);
+pub fn info<T: Into<String>>(message: T) {
+    println!("{} {}", "Info:".blue(), message.into());
 }
 
 /// Displays a success message in green.
-pub fn success(message: String) {
-    println!("{} {}", "Success:".green(), message);
+pub fn success<T: Into<String>>(message: T) {
+    println!("{} {}", "Success:".green(), message.into());
 }
 
 /// Displays a yellow warning message, indicating that something shouldn't happen
 /// but program should compile successfully nontheless (minor error).
-pub fn warn(message: String) {
-    eprintln!("{} {}", "Warning:".yellow(), message);
+pub fn warn<T: Into<String>>(message: T) {
+    eprintln!("{} {}", "Warning:".yellow(), message.into());
 }
