@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 colored = "1.9"
-climake = "2.1.0"
+climake = "2.2"
 
 [dependencies.jingo-lib]
 path = "../jingo-lib/"

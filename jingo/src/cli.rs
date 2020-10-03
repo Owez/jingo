@@ -1,19 +1,8 @@
 //! Contains [climake]-based cli parsing for the jingo cli
 
 use crate::log;
-use climake::{Argument, CLIMake, DataType, PassedData};
+use climake::{Argument, CliMake, DataType, PassedData, crate_version};
 use std::path::PathBuf;
-
-/// Gets properly-formatted version
-fn crate_version() -> String {
-    format!(
-        "{}.{}.{}{}",
-        env!("CARGO_PKG_VERSION_MAJOR"),
-        env!("CARGO_PKG_VERSION_MINOR"),
-        env!("CARGO_PKG_VERSION_PATCH"),
-        option_env!("CARGO_PKG_VERSION_PRE").unwrap_or("")
-    )
-}
 
 /// Gets a single file from `Vec<PathBuf>` or returns an error for too little or
 /// too many
@@ -77,7 +66,7 @@ pub fn launch_cli() -> CliData {
     .unwrap();
 
     let args = &[arg_output.clone(), arg_file.clone(), arg_input.clone()];
-    let cli = CLIMake::new(
+    let cli = CliMake::new(
         args,
         Some("A lightweight, high-level language designed to be sleek and robust"),
         Some(crate_version()),
