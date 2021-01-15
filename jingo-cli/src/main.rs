@@ -1,23 +1,22 @@
 //! CLI frotnend for the [Jingo](https://github.com/owez/jingo) language
 
-use std::{env, fmt, path::PathBuf, process};
+use jingo_lib::frontend::scanner;
+use std::io::prelude::*;
+use std::{env, fmt, fs::File, path::PathBuf, process};
 
 /// Help infomation
-const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  compile [FILE] — Compiles a file\n  help — Shows this help";
+const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  compile [FILE] — Compiles a file\n  help — Shows this help\n\nAdvanced options:\n  scan [FILE] — Returns scanning stage only";
 
 /// Command to run
+#[derive(Debug, Clone, PartialEq)]
 enum Command {
     Compile,
     Run,
-}
-
-/// Shows error help message then exits with code 1
-fn err_help(msg: impl fmt::Display) -> ! {
-    eprintln!("Error: {}\n\n{}", msg, HELP_INFO);
-    process::exit(1)
+    Scan,
 }
 
 /// Parsed cli
+#[derive(Debug, Clone, PartialEq)]
 struct Parsed {
     /// The [Command] to run
     command: Command,
@@ -53,11 +52,63 @@ impl Parsed {
                 command: Command::Compile,
                 data: args[1..].to_vec(),
             },
+            "scan" => Self {
+                command: Command::Scan,
+                data: args[1..].to_vec(),
+            },
             _ => err_help(format!("Command '{}' not recognised", args[0])),
         }
     }
 }
 
+/// Shows error message then exits with code 1
+fn error_exit(msg: impl fmt::Display) -> ! {
+    eprintln!("Error: {}", msg);
+    process::exit(1)
+}
+
+/// Shows error help message then exits with code 1
+fn err_help(msg: impl fmt::Display) -> ! {
+    eprintln!("{}", HELP_INFO);
+    error_exit(msg)
+}
+
+/// Opens file or errors with frontend error
+fn open_file(filepath: impl AsRef<str>) -> String {
+    let filepath = PathBuf::from(filepath.as_ref());
+
+    if !filepath.is_file() {
+        error_exit(format!("File {:?} doesn't exist", filepath))
+    }
+
+    let mut file = match File::open(filepath.clone()) {
+        Ok(x) => x,
+        Err(err) => error_exit(format!("Could not open {:?}, {}", filepath, err)),
+    };
+
+    let mut contents = String::new();
+
+    match file.read_to_string(&mut contents) {
+        Ok(_) => (),
+        Err(err) => error_exit(format!("Could not read {:?}, {}", filepath, err)),
+    };
+
+    contents
+}
+
+/// Runs [Command::Scan]
+fn run_scan(parsed: Parsed) {
+    println!(
+        "Scanned output:\n{:#?}",
+        scanner::launch(open_file(&parsed.data[0]))
+    )
+}
+
 fn main() {
     let parsed = Parsed::new();
+
+    match parsed.command {
+        Command::Scan => run_scan(parsed),
+        other => todo!("Finish ran '{:?}' command", other),
+    }
 }

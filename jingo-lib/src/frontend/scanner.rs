@@ -75,7 +75,7 @@ pub enum Token {
 impl Token {
     /// Creates a new [Token] from input string, returning a [ScanError::TokenNotFound]
     /// if the token could not be found
-    pub fn new<'a>(mut input: Peekable<impl Iterator<Item = &'a char>>) -> Result<Self, ScanError> {
+    pub fn new(input: &mut Peekable<impl Iterator<Item = char>>) -> Result<Self, ScanError> {
         match input.next().ok_or(ScanError::UnexpectedEof)? {
             '(' => Ok(Token::ParenLeft),
             ')' => Ok(Token::ParenRight),
@@ -88,37 +88,55 @@ impl Token {
             '*' => Ok(Token::Star),
             '+' => Ok(Token::Plus),
             '-' => Ok(Token::Minus),
-            '=' => {
-                if input.peek().ok_or(ScanError::UnexpectedEof)? == &&'=' {
+            '=' => match input.peek() {
+                Some(&'=') => {
+                    input.next();
                     Ok(Token::EqualsEquals)
-                } else {
-                    Ok(Token::Equals)
                 }
-            }
-            '!' => {
-                if input.peek().ok_or(ScanError::UnexpectedEof)? == &&'=' {
+                _ => Ok(Token::Equals),
+            },
+            '!' => match input.peek() {
+                Some(&'=') => {
+                    input.next();
                     Ok(Token::ExclaimEquals)
-                } else {
-                    Ok(Token::Exclaim)
                 }
-            }
-            '<' => {
-                if input.peek().ok_or(ScanError::UnexpectedEof)? == &&'=' {
+                _ => Ok(Token::Exclaim),
+            },
+            '<' => match input.peek() {
+                Some(&'=') => {
+                    input.next();
                     Ok(Token::LessEquals)
-                } else {
-                    Ok(Token::Less)
                 }
-            }
-            '>' => {
-                if input.peek().ok_or(ScanError::UnexpectedEof)? == &&'=' {
+                _ => Ok(Token::Less),
+            },
+            '>' => match input.peek() {
+                Some(&'=') => {
+                    input.next();
                     Ok(Token::GreaterEquals)
-                } else {
-                    Ok(Token::Greater)
                 }
-            }
-            _ => todo!(),
+                _ => Ok(Token::Greater),
+            },
+            '"' => todo!(),  // string
+            '\'' => todo!(), // char
+            _ => todo!(),    // id
         }
     }
+}
+
+/// Scan given input into a vector of [Token] for further compilation
+pub fn launch(input: impl AsRef<str>) -> Result<Vec<Token>, ScanError> {
+    let mut input = input.as_ref().chars().into_iter().peekable();
+    let mut output = vec![];
+
+    loop {
+        match Token::new(&mut input) {
+            Ok(token) => output.push(token),
+            Err(ScanError::UnexpectedEof) => break,
+            Err(err) => return Err(err),
+        }
+    }
+
+    Ok(output)
 }
 
 #[cfg(test)]
@@ -128,7 +146,7 @@ mod tests {
     #[test]
     fn eqeq() {
         assert_eq!(
-            Token::new(['=', '='].iter().peekable()).unwrap(),
+            Token::new(&mut "==".chars().peekable()).unwrap(),
             Token::EqualsEquals
         )
     }
@@ -136,7 +154,7 @@ mod tests {
     #[test]
     fn neeq() {
         assert_eq!(
-            Token::new(['!', '='].iter().peekable()).unwrap(),
+            Token::new(&mut "!=".chars().peekable()).unwrap(),
             Token::ExclaimEquals
         )
     }
@@ -144,7 +162,7 @@ mod tests {
     #[test]
     fn lesseq() {
         assert_eq!(
-            Token::new(['<', '='].iter().peekable()).unwrap(),
+            Token::new(&mut "<=".chars().peekable()).unwrap(),
             Token::LessEquals
         )
     }
@@ -152,8 +170,23 @@ mod tests {
     #[test]
     fn greatereq() {
         assert_eq!(
-            Token::new(['>', '='].iter().peekable()).unwrap(),
+            Token::new(&mut ">=".chars().peekable()).unwrap(),
             Token::GreaterEquals
+        )
+    }
+
+    #[test]
+    fn launch_scan() {
+        assert_eq!(
+            launch("=!==!=!!=").unwrap(),
+            vec![
+                Token::Equals,
+                Token::ExclaimEquals,
+                Token::Equals,
+                Token::ExclaimEquals,
+                Token::Exclaim,
+                Token::ExclaimEquals
+            ]
         )
     }
 }
