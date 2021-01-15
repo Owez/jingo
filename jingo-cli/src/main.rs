@@ -98,7 +98,9 @@ fn open_file(filepath: impl AsRef<str>) -> String {
 
 /// Runs [Command::Scan]
 fn run_scan(parsed: Parsed) {
-    if parsed.data.len() != 1 {
+    if parsed.data.len() == 0 {
+        err_help("No files passed for scanning")
+    } else if parsed.data.len() > 1 {
         err_help("More then one file passed for scanning")
     }
 
