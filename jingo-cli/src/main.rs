@@ -3,7 +3,7 @@
 use std::{env, fmt, path::PathBuf, process};
 
 /// Help infomation
-const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  compile [FILE] — Compiles a file\n  (--help | -h) — Shows this help";
+const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  compile [FILE] — Compiles a file\n  help — Shows this help";
 
 /// Command to run
 enum Command {
@@ -41,7 +41,7 @@ impl Parsed {
         }
 
         match args[0].as_str() {
-            "--help" | "-h" => {
+            "help" | "--help" | "-h" => {
                 println!("{}", HELP_INFO);
                 process::exit(0)
             }
