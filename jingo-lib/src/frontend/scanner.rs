@@ -1,6 +1,8 @@
 //! Scanner/lexer stage of parsing, the first main step to parse raw characters
 //! into further parsable tokens
 
+use crate::Meta;
+
 use std::{fmt, iter::Peekable};
 
 /// Error enumeration representing errors whilst scanning; see the [fmt::Display]
@@ -37,6 +39,8 @@ pub enum Token {
     Semicolon,
     FwdSlash,
     Star,
+    Newline,
+    Whitespace,
 
     // math-only symbols
     Plus,
@@ -67,7 +71,7 @@ pub enum Token {
 
     // literals
     Id(String),
-    Str(String), // this is unfiltered (e.g. otherwise invalid `\`)
+    Str(String),
     Char(char),
     Number(i64),
 }
@@ -86,6 +90,8 @@ impl Token {
             ';' => Ok(Token::Semicolon),
             '/' => Ok(Token::FwdSlash),
             '*' => Ok(Token::Star),
+            '\n' => Ok(Token::Newline),
+            ' ' | '\t' => Ok(Token::Whitespace),
             '+' => Ok(Token::Plus),
             '-' => Ok(Token::Minus),
             '=' => match input.peek() {
@@ -116,23 +122,31 @@ impl Token {
                 }
                 _ => Ok(Token::Greater),
             },
-            '"' => todo!(),  // string
-            '\'' => todo!(), // char
-            _ => todo!(),    // id
+            '"' => todo!("string"),
+            '\'' => todo!("char"),
+            _ => todo!("id"),
         }
     }
 }
 
 /// Scan given input into a vector of [Token] for further compilation
-pub fn launch(input: impl AsRef<str>) -> Result<Vec<Token>, ScanError> {
+pub fn launch(mut meta: Meta, input: impl AsRef<str>) -> Result<Vec<Token>, (ScanError, Meta)> {
     let mut input = input.as_ref().chars().into_iter().peekable();
     let mut output = vec![];
 
     loop {
+        meta.col += 1;
+
         match Token::new(&mut input) {
-            Ok(token) => output.push(token),
+            Ok(token) => {
+                if token == Token::Newline {
+                    meta.newline()
+                }
+
+                output.push(token)
+            }
             Err(ScanError::UnexpectedEof) => break,
-            Err(err) => return Err(err),
+            Err(err) => return Err((err, meta)),
         }
     }
 
@@ -178,7 +192,7 @@ mod tests {
     #[test]
     fn launch_scan() {
         assert_eq!(
-            launch("=!==!=!!=").unwrap(),
+            launch(Meta::new(None), "=!==!=!!=").unwrap(),
             vec![
                 Token::Equals,
                 Token::ExclaimEquals,

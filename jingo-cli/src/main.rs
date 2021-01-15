@@ -1,6 +1,6 @@
 //! CLI frotnend for the [Jingo](https://github.com/owez/jingo) language
 
-use jingo_lib::frontend::scanner;
+use jingo_lib::{frontend::scanner, Meta};
 use std::io::prelude::*;
 use std::{env, fmt, fs::File, path::PathBuf, process};
 
@@ -36,7 +36,7 @@ impl Parsed {
     /// Parses custom arguments
     fn custom(args: Vec<String>) -> Self {
         if args.len() == 0 {
-            err_help("No arguments passed");
+            help_exit("No arguments passed");
         }
 
         match args[0].as_str() {
@@ -56,26 +56,31 @@ impl Parsed {
                 command: Command::Scan,
                 data: args[1..].to_vec(),
             },
-            _ => err_help(format!("Command '{}' not recognised", args[0])),
+            _ => help_exit(format!("Command '{}' not recognised", args[0])),
         }
     }
 }
 
-/// Shows error message then exits with code 1
-fn error_exit(msg: impl fmt::Display) -> ! {
-    eprintln!("Error: {}", msg);
+/// Shows message then exits with code 1
+fn msg_exit(msg: impl fmt::Display) -> ! {
+    eprintln!("{}", msg);
     process::exit(1)
 }
 
+/// Shows error message then exits with code 1
+fn error_exit(msg: impl fmt::Display) -> ! {
+    msg_exit(format!("Error: {}", msg));
+}
+
 /// Shows error help message then exits with code 1
-fn err_help(msg: impl fmt::Display) -> ! {
+fn help_exit(msg: impl fmt::Display) -> ! {
     eprintln!("{}\n", HELP_INFO);
     error_exit(msg)
 }
 
 /// Opens file or errors with frontend error
-fn open_file(filepath: impl AsRef<str>) -> String {
-    let filepath = PathBuf::from(filepath.as_ref());
+fn open_file(filepath: impl Into<PathBuf>) -> String {
+    let filepath = filepath.into();
 
     if !filepath.is_file() {
         error_exit(format!("File {:?} doesn't exist", filepath))
@@ -99,15 +104,18 @@ fn open_file(filepath: impl AsRef<str>) -> String {
 /// Runs [Command::Scan]
 fn run_scan(parsed: Parsed) {
     if parsed.data.len() == 0 {
-        err_help("No files passed for scanning")
+        help_exit("No files passed for scanning")
     } else if parsed.data.len() > 1 {
-        err_help("More then one file passed for scanning")
+        help_exit("More then one file passed for scanning")
     }
 
-    println!(
-        "Scanned output:\n{:#?}",
-        scanner::launch(open_file(&parsed.data[0]))
-    )
+    let filepath = PathBuf::from(parsed.data[0].clone());
+    let scanned = scanner::launch(Meta::new(filepath.clone()), open_file(filepath));
+
+    match scanned {
+        Ok(output) => println!("Scanned output:\n{:#?}", output),
+        Err((err, meta)) => msg_exit(meta.error(err)),
+    }
 }
 
 fn main() {
