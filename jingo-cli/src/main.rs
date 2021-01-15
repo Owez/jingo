@@ -69,7 +69,7 @@ fn error_exit(msg: impl fmt::Display) -> ! {
 
 /// Shows error help message then exits with code 1
 fn err_help(msg: impl fmt::Display) -> ! {
-    eprintln!("{}", HELP_INFO);
+    eprintln!("{}\n", HELP_INFO);
     error_exit(msg)
 }
 
@@ -98,6 +98,10 @@ fn open_file(filepath: impl AsRef<str>) -> String {
 
 /// Runs [Command::Scan]
 fn run_scan(parsed: Parsed) {
+    if parsed.data.len() != 1 {
+        err_help("More then one file passed for scanning")
+    }
+
     println!(
         "Scanned output:\n{:#?}",
         scanner::launch(open_file(&parsed.data[0]))
