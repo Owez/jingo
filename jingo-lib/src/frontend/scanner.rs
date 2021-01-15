@@ -140,7 +140,7 @@ pub fn launch(mut meta: Meta, input: impl AsRef<str>) -> Result<Vec<Token>, (Sca
         match Token::new(&mut input) {
             Ok(token) => {
                 if token == Token::Newline {
-                    meta.newline()
+                    meta.newline(1)
                 }
 
                 output.push(token)

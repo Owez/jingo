@@ -50,8 +50,8 @@ impl Meta {
     }
 
     /// Resets for newline
-    pub(crate) fn newline(&mut self) {
-        self.line += 1;
+    pub(crate) fn newline(&mut self, times: usize) {
+        self.line += times;
         self.col = 0;
     }
 }
