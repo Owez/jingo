@@ -1,7 +1,7 @@
 //! Scanner/lexer stage of parsing, the first main step to parse raw characters
 //! into further parsable tokens
 
-use crate::Meta;
+use crate::{Meta, MetaPos};
 
 use std::{fmt, iter::Peekable};
 
@@ -9,14 +9,14 @@ use std::{fmt, iter::Peekable};
 /// trait impl for documentation on each case
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScanError {
-    TokenNotFound(String),
+    TokenInnerNotFound(String),
     UnexpectedEof,
 }
 
 impl fmt::Display for ScanError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ScanError::TokenNotFound(input) => {
+            ScanError::TokenInnerNotFound(input) => {
                 write!(f, "Input '{}' is not a known keyword or identifier", input)
             }
             ScanError::UnexpectedEof => {
@@ -26,9 +26,10 @@ impl fmt::Display for ScanError {
     }
 }
 
-/// Token type
+/// Type enumeration of a token, defining the possible types for a token, along
+/// with any data (such as in string literals) the token may use
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token {
+pub enum TokenInner {
     // single-char
     ParenLeft,
     ParenRight,
@@ -76,56 +77,79 @@ pub enum Token {
     Number(i64),
 }
 
-impl Token {
-    /// Creates a new [Token] from input string, returning a [ScanError::TokenNotFound]
+impl TokenInner {
+    /// Creates a new [TokenInner] from input string, returning a [ScanError::TokenInnerNotFound]
     /// if the token could not be found
     pub fn new(input: &mut Peekable<impl Iterator<Item = char>>) -> Result<Self, ScanError> {
         match input.next().ok_or(ScanError::UnexpectedEof)? {
-            '(' => Ok(Token::ParenLeft),
-            ')' => Ok(Token::ParenRight),
-            '{' => Ok(Token::BraceLeft),
-            '}' => Ok(Token::BraceRight),
-            ',' => Ok(Token::Comma),
-            '.' => Ok(Token::Dot),
-            ';' => Ok(Token::Semicolon),
-            '/' => Ok(Token::FwdSlash),
-            '*' => Ok(Token::Star),
-            '\n' => Ok(Token::Newline),
-            ' ' | '\t' => Ok(Token::Whitespace),
-            '+' => Ok(Token::Plus),
-            '-' => Ok(Token::Minus),
+            '(' => Ok(TokenInner::ParenLeft),
+            ')' => Ok(TokenInner::ParenRight),
+            '{' => Ok(TokenInner::BraceLeft),
+            '}' => Ok(TokenInner::BraceRight),
+            ',' => Ok(TokenInner::Comma),
+            '.' => Ok(TokenInner::Dot),
+            ';' => Ok(TokenInner::Semicolon),
+            '/' => Ok(TokenInner::FwdSlash),
+            '*' => Ok(TokenInner::Star),
+            '\n' => Ok(TokenInner::Newline),
+            ' ' | '\t' => Ok(TokenInner::Whitespace),
+            '+' => Ok(TokenInner::Plus),
+            '-' => Ok(TokenInner::Minus),
             '=' => match input.peek() {
                 Some(&'=') => {
                     input.next();
-                    Ok(Token::EqualsEquals)
+                    Ok(TokenInner::EqualsEquals)
                 }
-                _ => Ok(Token::Equals),
+                _ => Ok(TokenInner::Equals),
             },
             '!' => match input.peek() {
                 Some(&'=') => {
                     input.next();
-                    Ok(Token::ExclaimEquals)
+                    Ok(TokenInner::ExclaimEquals)
                 }
-                _ => Ok(Token::Exclaim),
+                _ => Ok(TokenInner::Exclaim),
             },
             '<' => match input.peek() {
                 Some(&'=') => {
                     input.next();
-                    Ok(Token::LessEquals)
+                    Ok(TokenInner::LessEquals)
                 }
-                _ => Ok(Token::Less),
+                _ => Ok(TokenInner::Less),
             },
             '>' => match input.peek() {
                 Some(&'=') => {
                     input.next();
-                    Ok(Token::GreaterEquals)
+                    Ok(TokenInner::GreaterEquals)
                 }
-                _ => Ok(Token::Greater),
+                _ => Ok(TokenInner::Greater),
             },
             '"' => todo!("string"),
             '\'' => todo!("char"),
             _ => todo!("id"),
         }
+    }
+}
+
+/// Represents a token with a token type + data (i.e. [TokenInner]) along with
+/// positional data (i.e. [MetaPos]) where the token starts
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token {
+    /// Type + data of this token
+    pub inner: TokenInner,
+
+    /// Positional data for where this token occurs
+    pub pos: MetaPos,
+}
+
+impl From<Token> for TokenInner {
+    fn from(token: Token) -> Self {
+        token.inner
+    }
+}
+
+impl From<Token> for MetaPos {
+    fn from(token: Token) -> Self {
+        token.pos
     }
 }
 
@@ -135,15 +159,18 @@ pub fn launch(mut meta: Meta, input: impl AsRef<str>) -> Result<Vec<Token>, (Sca
     let mut output = vec![];
 
     loop {
-        meta.col += 1;
+        meta.pos.col += 1;
 
-        match Token::new(&mut input) {
-            Ok(token) => {
-                if token == Token::Newline {
+        match TokenInner::new(&mut input) {
+            Ok(inner) => {
+                if inner == TokenInner::Newline {
                     meta.newline(1)
                 }
 
-                output.push(token)
+                output.push(Token {
+                    inner,
+                    pos: meta.pos.clone(),
+                })
             }
             Err(ScanError::UnexpectedEof) => break,
             Err(err) => return Err((err, meta)),
@@ -160,47 +187,49 @@ mod tests {
     #[test]
     fn eqeq() {
         assert_eq!(
-            Token::new(&mut "==".chars().peekable()).unwrap(),
-            Token::EqualsEquals
+            TokenInner::new(&mut "==".chars().peekable()).unwrap(),
+            TokenInner::EqualsEquals
         )
     }
 
     #[test]
     fn neeq() {
         assert_eq!(
-            Token::new(&mut "!=".chars().peekable()).unwrap(),
-            Token::ExclaimEquals
+            TokenInner::new(&mut "!=".chars().peekable()).unwrap(),
+            TokenInner::ExclaimEquals
         )
     }
 
     #[test]
     fn lesseq() {
         assert_eq!(
-            Token::new(&mut "<=".chars().peekable()).unwrap(),
-            Token::LessEquals
+            TokenInner::new(&mut "<=".chars().peekable()).unwrap(),
+            TokenInner::LessEquals
         )
     }
 
     #[test]
     fn greatereq() {
         assert_eq!(
-            Token::new(&mut ">=".chars().peekable()).unwrap(),
-            Token::GreaterEquals
+            TokenInner::new(&mut ">=".chars().peekable()).unwrap(),
+            TokenInner::GreaterEquals
         )
     }
 
     #[test]
     fn launch_scan() {
-        assert_eq!(
-            launch(Meta::new(None), "=!==!=!!=").unwrap(),
-            vec![
-                Token::Equals,
-                Token::ExclaimEquals,
-                Token::Equals,
-                Token::ExclaimEquals,
-                Token::Exclaim,
-                Token::ExclaimEquals
-            ]
-        )
+        let tokens = launch(Meta::new(None), "=!==!=!!=").unwrap();
+        let exp = vec![
+            TokenInner::Equals,
+            TokenInner::ExclaimEquals,
+            TokenInner::Equals,
+            TokenInner::ExclaimEquals,
+            TokenInner::Exclaim,
+            TokenInner::ExclaimEquals,
+        ];
+
+        for (ind, token) in tokens.iter().enumerate() {
+            assert_eq!(token.inner, exp[ind]);
+        }
     }
 }
