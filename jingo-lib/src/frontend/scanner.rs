@@ -195,19 +195,6 @@ pub fn launch(mut meta: Meta, input: impl AsRef<str>) -> Result<Vec<Token>, (Sca
             },
             Err(err) => return Err((err, meta)),
         };
-
-        // meta.pos.col += 1;
-
-        // match TokenInner::new(&mut meta.pos, &mut input) {
-        //     Ok(inner) => {
-        //         output.push(Token {
-        //             inner: inner,
-        //             pos: meta.pos.clone(),
-        //         });
-        //     }
-        //     Err(ScanError::UnexpectedEof) => break,
-        //     Err(err) => return Err((err, meta)),
-        // }
     }
 
     Ok(output)
