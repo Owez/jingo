@@ -192,9 +192,7 @@ impl Token {
                             err_c => Err(ScanError::InvalidCharEscape(err_c)),
                         },
                     },
-                    '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-                        get_num_content(pos, input, c)
-                    }
+                    '0'..='9' => get_num_content(pos, input, c),
                     _ => todo!("identifiers"),
                 },
                 None => Ok(TokenInner::Eof),
@@ -300,7 +298,7 @@ fn get_num_content(
         };
 
         match cur_char {
-            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => numstr.push(*cur_char),
+            '0'..='9' => numstr.push(*cur_char),
             '.' => {
                 if is_float {
                     return Err(ScanError::MultipleDots);
