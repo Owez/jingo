@@ -80,7 +80,7 @@ pub enum TokenInner {
     Id(String),
     Str(String),
     Char(char),
-    Number(i64),
+    Int(i64),
     Float(f64),
 
     // phantom (special; not added to output)
@@ -165,7 +165,9 @@ impl Token {
                             err_c => Err(ScanError::InvalidCharEscape(err_c)),
                         },
                     },
-
+                    '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+                        get_num_content(pos, input, c)
+                    }
                     _ => todo!("identifiers"),
                 },
                 None => Ok(TokenInner::Eof),
@@ -186,7 +188,7 @@ impl From<Token> for MetaPos {
     }
 }
 
-/// Scans a raw char input for a valid [TokenType::Str]
+/// Scans a raw char input for a valid [TokenInner::Str]
 fn get_str_content(
     pos: &mut MetaPos,
     input: &mut Peekable<impl Iterator<Item = char>>,
@@ -231,6 +233,15 @@ fn get_str_content(
     }
 
     Ok(output.iter().collect())
+}
+
+/// Scans a raw char input for a valid [TokenInner::Int] or [TokenInner::Float]
+fn get_num_content(
+    pos: &mut MetaPos,
+    input: &mut Peekable<impl Iterator<Item = char>>,
+    start: char,
+) -> Result<TokenInner, ScanError> {
+    todo!("int/float scanning")
 }
 
 /// Scan given input into a vector of [Token] for further compilation
@@ -388,32 +399,32 @@ mod tests {
     }
 
     #[test]
-    fn numlit() {
+    fn intlit() {
         assert_eq!(
             launch(Meta::new(None), "45635463465").unwrap()[0],
             Token {
-                inner: TokenInner::Number(45635463465),
+                inner: TokenInner::Int(45635463465),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), "0").unwrap()[0],
             Token {
-                inner: TokenInner::Number(0),
+                inner: TokenInner::Int(0),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), "-0").unwrap()[0],
             Token {
-                inner: TokenInner::Number(-0),
+                inner: TokenInner::Int(-0),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), "-45635463465").unwrap()[0],
             Token {
-                inner: TokenInner::Number(-45635463465),
+                inner: TokenInner::Int(-45635463465),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
