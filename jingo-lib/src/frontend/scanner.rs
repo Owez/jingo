@@ -79,65 +79,9 @@ pub enum TokenInner {
     Str(String),
     Char(char),
     Number(i64),
-}
 
-impl TokenInner {
-    /// Creates a new [TokenInner] from input string, returning a [ScanError::TokenInnerNotFound]
-    /// if the token could not be found
-    pub fn new(input: &mut Peekable<impl Iterator<Item = char>>) -> Result<Self, ScanError> {
-        match input.next().ok_or(ScanError::UnexpectedEof)? {
-            '(' => Ok(TokenInner::ParenLeft),
-            ')' => Ok(TokenInner::ParenRight),
-            '{' => Ok(TokenInner::BraceLeft),
-            '}' => Ok(TokenInner::BraceRight),
-            ',' => Ok(TokenInner::Comma),
-            '.' => Ok(TokenInner::Dot),
-            ';' => Ok(TokenInner::Semicolon),
-            '/' => Ok(TokenInner::FwdSlash),
-            '*' => Ok(TokenInner::Star),
-            '\n' => Ok(TokenInner::Newline),
-            ' ' | '\t' => Ok(TokenInner::Whitespace),
-            '+' => Ok(TokenInner::Plus),
-            '-' => Ok(TokenInner::Minus),
-            '=' => match input.peek() {
-                Some(&'=') => {
-                    input.next();
-                    Ok(TokenInner::EqualsEquals)
-                }
-                _ => Ok(TokenInner::Equals),
-            },
-            '!' => match input.peek() {
-                Some(&'=') => {
-                    input.next();
-                    Ok(TokenInner::ExclaimEquals)
-                }
-                _ => Ok(TokenInner::Exclaim),
-            },
-            '<' => match input.peek() {
-                Some(&'=') => {
-                    input.next();
-                    Ok(TokenInner::LessEquals)
-                }
-                _ => Ok(TokenInner::Less),
-            },
-            '>' => match input.peek() {
-                Some(&'=') => {
-                    input.next();
-                    Ok(TokenInner::GreaterEquals)
-                }
-                _ => Ok(TokenInner::Greater),
-            },
-            '"' => todo!("string"),
-            '\'' => match input.next().ok_or(ScanError::UnexpectedEof)? {
-                '\'' => Err(ScanError::EmptyCharLiteral),
-                c => match input.next().ok_or(ScanError::UnexpectedEof)? {
-                    '\'' => Ok(TokenInner::Char(c)),
-                    err_c => Err(ScanError::InvalidCharEscape(err_c)),
-                },
-            },
-            _ => todo!("id"),
-        }
-    }
+    // phantom (special; not added to output)
+    Eof,
 }
 
 /// Represents a token with a token type + data (i.e. [TokenInner]) along with
@@ -149,6 +93,81 @@ pub struct Token {
 
     /// Positional data for where this token occurs
     pub pos: MetaPos,
+}
+
+impl Token {
+    /// Creates a new [Token] from initial positional data and input string
+    pub fn new(
+        pos: &mut MetaPos,
+        input: &mut Peekable<impl Iterator<Item = char>>,
+    ) -> Result<Self, ScanError> {
+        pos.col += 1;
+
+        Ok(Self {
+            pos: pos.clone(),
+            inner: match input.next() {
+                Some(c) => match c {
+                    '(' => Ok(TokenInner::ParenLeft),
+                    ')' => Ok(TokenInner::ParenRight),
+                    '{' => Ok(TokenInner::BraceLeft),
+                    '}' => Ok(TokenInner::BraceRight),
+                    ',' => Ok(TokenInner::Comma),
+                    '.' => Ok(TokenInner::Dot),
+                    ';' => Ok(TokenInner::Semicolon),
+                    '/' => Ok(TokenInner::FwdSlash),
+                    '*' => Ok(TokenInner::Star),
+                    '\n' => {
+                        pos.newline(1);
+                        Ok(TokenInner::Newline)
+                    }
+                    ' ' | '\t' => Ok(TokenInner::Whitespace),
+                    '+' => Ok(TokenInner::Plus),
+                    '-' => Ok(TokenInner::Minus),
+                    '=' => match input.peek() {
+                        Some(&'=') => {
+                            input.next();
+                            Ok(TokenInner::EqualsEquals)
+                        }
+                        _ => Ok(TokenInner::Equals),
+                    },
+                    '!' => match input.peek() {
+                        Some(&'=') => {
+                            input.next();
+                            Ok(TokenInner::ExclaimEquals)
+                        }
+                        _ => Ok(TokenInner::Exclaim),
+                    },
+                    '<' => match input.peek() {
+                        Some(&'=') => {
+                            input.next();
+                            Ok(TokenInner::LessEquals)
+                        }
+                        _ => Ok(TokenInner::Less),
+                    },
+                    '>' => match input.peek() {
+                        Some(&'=') => {
+                            input.next();
+                            Ok(TokenInner::GreaterEquals)
+                        }
+                        _ => Ok(TokenInner::Greater),
+                    },
+                    '"' => todo!("string"),
+                    '\'' => match input.next().ok_or(ScanError::UnexpectedEof)? {
+                        '\'' => Err(ScanError::EmptyCharLiteral),
+                        c => match input.next().ok_or(ScanError::UnexpectedEof)? {
+                            '\'' => {
+                                pos.col += 2;
+                                Ok(TokenInner::Char(c))
+                            }
+                            err_c => Err(ScanError::InvalidCharEscape(err_c)),
+                        },
+                    },
+                    _ => todo!("id"),
+                },
+                None => Ok(TokenInner::Eof),
+            }?,
+        })
+    }
 }
 
 impl From<Token> for TokenInner {
@@ -169,24 +188,26 @@ pub fn launch(mut meta: Meta, input: impl AsRef<str>) -> Result<Vec<Token>, (Sca
     let mut output = vec![];
 
     loop {
-        meta.pos.col += 1;
-
-        match TokenInner::new(&mut input) {
-            Ok(inner) => {
-                output.push(Token {
-                    inner: inner.clone(), // TODO: fix order of op with match
-                    pos: meta.pos.clone(),
-                });
-
-                match inner {
-                    TokenInner::Newline => meta.newline(1),
-                    TokenInner::Char(_) => meta.pos.col += 2,
-                    _ => (),
-                }
-            }
-            Err(ScanError::UnexpectedEof) => break,
+        match Token::new(&mut meta.pos, &mut input) {
+            Ok(token) => match token.inner {
+                TokenInner::Eof => break,
+                _ => output.push(token),
+            },
             Err(err) => return Err((err, meta)),
-        }
+        };
+
+        // meta.pos.col += 1;
+
+        // match TokenInner::new(&mut meta.pos, &mut input) {
+        //     Ok(inner) => {
+        //         output.push(Token {
+        //             inner: inner,
+        //             pos: meta.pos.clone(),
+        //         });
+        //     }
+        //     Err(ScanError::UnexpectedEof) => break,
+        //     Err(err) => return Err((err, meta)),
+        // }
     }
 
     Ok(output)
@@ -199,7 +220,9 @@ mod tests {
     #[test]
     fn eqeq() {
         assert_eq!(
-            TokenInner::new(&mut "==".chars().peekable()).unwrap(),
+            Token::new(&mut MetaPos::new(), &mut "==".chars().peekable())
+                .unwrap()
+                .inner,
             TokenInner::EqualsEquals
         )
     }
@@ -207,7 +230,9 @@ mod tests {
     #[test]
     fn neeq() {
         assert_eq!(
-            TokenInner::new(&mut "!=".chars().peekable()).unwrap(),
+            Token::new(&mut MetaPos::new(), &mut "!=".chars().peekable())
+                .unwrap()
+                .inner,
             TokenInner::ExclaimEquals
         )
     }
@@ -215,7 +240,9 @@ mod tests {
     #[test]
     fn lesseq() {
         assert_eq!(
-            TokenInner::new(&mut "<=".chars().peekable()).unwrap(),
+            Token::new(&mut MetaPos::new(), &mut "<=".chars().peekable())
+                .unwrap()
+                .inner,
             TokenInner::LessEquals
         )
     }
@@ -223,7 +250,9 @@ mod tests {
     #[test]
     fn greatereq() {
         assert_eq!(
-            TokenInner::new(&mut ">=".chars().peekable()).unwrap(),
+            Token::new(&mut MetaPos::new(), &mut ">=".chars().peekable())
+                .unwrap()
+                .inner,
             TokenInner::GreaterEquals
         )
     }
