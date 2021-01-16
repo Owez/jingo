@@ -2,8 +2,7 @@
 name = "jingo-lib"
 version = "0.1.0"
 authors = ["Owez <root@ogriffiths.com>"]
+repository = "https://github.com/owez/jingo"
+license = "MIT"
+readme = "../README.md"
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]

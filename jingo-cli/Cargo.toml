@@ -1,7 +1,11 @@
 [package]
 name = "jingo-cli"
+publish = false
 version = "0.1.0"
 authors = ["Owez <root@ogriffiths.com>"]
+license = "MIT"
+repository = "https://github.com/owez/jingo"
+readme = "../README.md"
 edition = "2018"
 
 [dependencies.jingo-lib]
