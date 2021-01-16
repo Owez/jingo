@@ -3,6 +3,7 @@
 
 use crate::meta::{Meta, MetaPos};
 
+use std::num::{ParseFloatError, ParseIntError};
 use std::{fmt, iter::Peekable};
 
 /// Error enumeration representing errors whilst scanning; see the [fmt::Display]
@@ -14,6 +15,9 @@ pub enum ScanError {
     EmptyCharLiteral,
     InvalidCharEscape(char),
     UnknownStrEscape(char),
+    MultipleDots,
+    InvalidFloat(ParseFloatError),
+    InvalidInt(ParseIntError),
 }
 
 impl fmt::Display for ScanError {
@@ -28,6 +32,9 @@ impl fmt::Display for ScanError {
             ScanError::EmptyCharLiteral => write!(f, "Character literals must not be empty"),
             ScanError::InvalidCharEscape(c) => write!(f, "Invalid char escape '{}'", c),
             ScanError::UnknownStrEscape(c) => write!(f, "Unknown string escape '{}'", c),
+            ScanError::MultipleDots => write!(f, "Number given as multiple dots"),
+            ScanError::InvalidFloat(err) => write!(f, "Could not parse float, {}", err),
+            ScanError::InvalidInt(err) => write!(f, "Could not parse int, {}", err),
         }
     }
 }
@@ -83,6 +90,10 @@ pub enum TokenInner {
     Int(i64),
     Float(f64),
 
+    // comments
+    Comment(String),
+    DocStr(String),
+
     // phantom (special; not added to output)
     Eof,
 }
@@ -125,7 +136,23 @@ impl Token {
                     }
                     ' ' | '\t' => Ok(TokenInner::Whitespace),
                     '+' => Ok(TokenInner::Plus),
-                    '-' => Ok(TokenInner::Minus),
+                    '-' => match input.peek() {
+                        Some(&'-') => {
+                            input.next();
+
+                            match input.next() {
+                                Some('-') => {
+                                    pos.col += 2;
+                                    Ok(TokenInner::DocStr(get_comment_content(pos, input)?))
+                                }
+                                _ => {
+                                    pos.col += 1;
+                                    Ok(TokenInner::Comment(get_comment_content(pos, input)?))
+                                }
+                            }
+                        }
+                        _ => Ok(TokenInner::Minus),
+                    },
                     '=' => match input.peek() {
                         Some(&'=') => {
                             input.next();
@@ -188,12 +215,34 @@ impl From<Token> for MetaPos {
     }
 }
 
+/// Scans a raw char input for a valid [TokenInner::Comment] or [TokenInner::DocStr]
+fn get_comment_content(
+    pos: &mut MetaPos,
+    input: &mut Peekable<impl Iterator<Item = char>>,
+) -> Result<String, ScanError> {
+    let mut output = String::new();
+
+    // .take_while() can't do newline
+    loop {
+        match input.next() {
+            Some('\n') => {
+                pos.newline(1);
+                break;
+            }
+            Some(other) => output.push(other),
+            None => break,
+        }
+    }
+
+    Ok(output.trim().to_string())
+}
+
 /// Scans a raw char input for a valid [TokenInner::Str]
 fn get_str_content(
     pos: &mut MetaPos,
     input: &mut Peekable<impl Iterator<Item = char>>,
 ) -> Result<String, ScanError> {
-    let mut output = vec![];
+    let mut output = String::new();
     let mut backslash_active = false;
 
     loop {
@@ -232,7 +281,7 @@ fn get_str_content(
         pos.col += 1;
     }
 
-    Ok(output.iter().collect())
+    Ok(output)
 }
 
 /// Scans a raw char input for a valid [TokenInner::Int] or [TokenInner::Float]
@@ -241,7 +290,45 @@ fn get_num_content(
     input: &mut Peekable<impl Iterator<Item = char>>,
     start: char,
 ) -> Result<TokenInner, ScanError> {
-    todo!("int/float scanning")
+    let mut numstr = String::from(start);
+    let mut is_float = false;
+
+    loop {
+        let cur_char = match input.peek() {
+            Some(c) => c,
+            None => break,
+        };
+
+        match cur_char {
+            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => numstr.push(*cur_char),
+            '.' => {
+                if is_float {
+                    return Err(ScanError::MultipleDots);
+                } else {
+                    is_float = true;
+                }
+            }
+            _ => break,
+        }
+
+        input.next();
+
+        pos.col += 1
+    }
+
+    Ok(if is_float {
+        TokenInner::Float(
+            numstr
+                .parse::<f64>()
+                .map_err(|err| ScanError::InvalidFloat(err))?,
+        )
+    } else {
+        TokenInner::Int(
+            numstr
+                .parse::<i64>()
+                .map_err(|err| ScanError::InvalidInt(err))?,
+        )
+    })
 }
 
 /// Scan given input into a vector of [Token] for further compilation
@@ -429,4 +516,9 @@ mod tests {
             }
         );
     }
+
+    // TODO: docstr test
+    // TODO: comment test
+    // TODO: int test
+    // TODO: float test
 }
