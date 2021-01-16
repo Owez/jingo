@@ -11,6 +11,8 @@ use std::{fmt, iter::Peekable};
 pub enum ScanError {
     TokenInnerNotFound(String),
     UnexpectedEof,
+    EmptyCharLiteral,
+    InvalidCharEscape(char),
 }
 
 impl fmt::Display for ScanError {
@@ -22,6 +24,8 @@ impl fmt::Display for ScanError {
             ScanError::UnexpectedEof => {
                 write!(f, "File ended abruptly whilst scanning, unexpected EOF")
             }
+            ScanError::EmptyCharLiteral => write!(f, "Character literals must not be empty"),
+            ScanError::InvalidCharEscape(c) => write!(f, "Invalid char escape '{}'", c),
         }
     }
 }
@@ -124,7 +128,13 @@ impl TokenInner {
                 _ => Ok(TokenInner::Greater),
             },
             '"' => todo!("string"),
-            '\'' => todo!("char"),
+            '\'' => match input.next().ok_or(ScanError::UnexpectedEof)? {
+                '\'' => Err(ScanError::EmptyCharLiteral),
+                c => match input.next().ok_or(ScanError::UnexpectedEof)? {
+                    '\'' => Ok(TokenInner::Char(c)),
+                    err_c => Err(ScanError::InvalidCharEscape(err_c)),
+                },
+            },
             _ => todo!("id"),
         }
     }
@@ -163,14 +173,16 @@ pub fn launch(mut meta: Meta, input: impl AsRef<str>) -> Result<Vec<Token>, (Sca
 
         match TokenInner::new(&mut input) {
             Ok(inner) => {
-                if inner == TokenInner::Newline {
-                    meta.newline(1)
-                }
-
                 output.push(Token {
-                    inner,
+                    inner: inner.clone(), // TODO: fix order of op with match
                     pos: meta.pos.clone(),
-                })
+                });
+
+                match inner {
+                    TokenInner::Newline => meta.newline(1),
+                    TokenInner::Char(_) => meta.pos.col += 2,
+                    _ => (),
+                }
             }
             Err(ScanError::UnexpectedEof) => break,
             Err(err) => return Err((err, meta)),
@@ -217,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn launch_scan() {
+    fn scan_basic() {
         let tokens = launch(Meta::new(None), "=!==!=!!=").unwrap();
         let exp = vec![
             TokenInner::Equals,
@@ -231,5 +243,62 @@ mod tests {
         for (ind, token) in tokens.iter().enumerate() {
             assert_eq!(token.inner, exp[ind]);
         }
+    }
+
+    #[test]
+    fn scan_token() {
+        let tokens = launch(Meta::new(None), "'h''i'").unwrap();
+        let exp = vec![
+            Token {
+                inner: TokenInner::Char('h'),
+                pos: MetaPos { line: 1, col: 1 },
+            },
+            Token {
+                inner: TokenInner::Char('i'),
+                pos: MetaPos { line: 1, col: 4 },
+            },
+        ];
+
+        for (ind, token) in tokens.iter().enumerate() {
+            assert_eq!(token, &exp[ind]);
+        }
+    }
+
+    #[test]
+    fn invalid_char_escape() {
+        assert_eq!(
+            launch(Meta::new(None), "'h;"),
+            Err((
+                ScanError::InvalidCharEscape(';'),
+                Meta {
+                    pos: MetaPos { line: 1, col: 1 },
+                    path: None
+                }
+            ))
+        );
+        assert_eq!(
+            launch(Meta::new(None), "'h\""),
+            Err((
+                ScanError::InvalidCharEscape('"'),
+                Meta {
+                    pos: MetaPos { line: 1, col: 1 },
+                    path: None
+                }
+            ))
+        );
+    }
+
+    #[test]
+    fn empty_char() {
+        assert_eq!(
+            launch(Meta::new(None), "''"),
+            Err((
+                ScanError::EmptyCharLiteral,
+                Meta {
+                    pos: MetaPos { line: 1, col: 1 },
+                    path: None
+                }
+            ))
+        )
     }
 }
