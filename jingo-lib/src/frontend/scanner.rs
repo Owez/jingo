@@ -151,7 +151,7 @@ impl Token {
                         }
                         _ => Ok(TokenInner::Greater),
                     },
-                    '"' => todo!("string"),
+                    '"' => todo!("strings"),
                     '\'' => match input.next().ok_or(ScanError::UnexpectedEof)? {
                         '\'' => Err(ScanError::EmptyCharLiteral),
                         c => match input.next().ok_or(ScanError::UnexpectedEof)? {
@@ -162,7 +162,7 @@ impl Token {
                             err_c => Err(ScanError::InvalidCharEscape(err_c)),
                         },
                     },
-                    _ => todo!("id"),
+                    _ => todo!("identifiers"),
                 },
                 None => Ok(TokenInner::Eof),
             }?,
@@ -315,6 +315,24 @@ mod tests {
                     path: None
                 }
             ))
+        )
+    }
+
+    #[test]
+    fn basic_strings() {
+        assert_eq!(
+            launch(Meta::new(None), "\"Hello there!\"").unwrap()[0],
+            Token {
+                inner: TokenInner::Str("Hello there!".to_string()),
+                pos: MetaPos { line: 1, col: 1 }
+            }
+        );
+        assert_eq!(
+            launch(Meta::new(None), "\"Hello ther\\e!\"").unwrap()[0],
+            Token {
+                inner: TokenInner::Str("Hello ther\\e!".to_string()),
+                pos: MetaPos { line: 1, col: 1 }
+            }
         )
     }
 }
