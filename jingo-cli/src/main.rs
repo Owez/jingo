@@ -1,6 +1,6 @@
 //! CLI frotnend for the [Jingo](https://github.com/owez/jingo) language
 
-use jingo_lib::{frontend::scanner, Meta};
+use jingo_lib::{frontend::scanner, meta::Meta};
 use std::io::prelude::*;
 use std::{env, fmt, fs::File, path::PathBuf, process};
 

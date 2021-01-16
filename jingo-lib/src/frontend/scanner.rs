@@ -1,7 +1,7 @@
 //! Scanner/lexer stage of parsing, the first main step to parse raw characters
 //! into further parsable tokens
 
-use crate::{Meta, MetaPos};
+use crate::meta::{Meta, MetaPos};
 
 use std::{fmt, iter::Peekable};
 
