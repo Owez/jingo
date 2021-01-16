@@ -13,6 +13,7 @@ pub enum ScanError {
     UnexpectedEof,
     EmptyCharLiteral,
     InvalidCharEscape(char),
+    UnknownStrEscape(char),
 }
 
 impl fmt::Display for ScanError {
@@ -26,6 +27,7 @@ impl fmt::Display for ScanError {
             }
             ScanError::EmptyCharLiteral => write!(f, "Character literals must not be empty"),
             ScanError::InvalidCharEscape(c) => write!(f, "Invalid char escape '{}'", c),
+            ScanError::UnknownStrEscape(c) => write!(f, "Unknown string escape '{}'", c),
         }
     }
 }
@@ -151,7 +153,48 @@ impl Token {
                         }
                         _ => Ok(TokenInner::Greater),
                     },
-                    '"' => todo!("strings"),
+                    '"' => {
+                        let mut output = vec![];
+                        let mut backslash_active = false;
+
+                        loop {
+                            match input.next().ok_or(ScanError::UnexpectedEof)? {
+                                '\\' => {
+                                    if backslash_active {
+                                        output.push('\\');
+                                        backslash_active = false;
+                                    } else {
+                                        backslash_active = true;
+                                    }
+                                }
+                                '"' => {
+                                    if backslash_active {
+                                        output.push('"');
+                                        backslash_active = false;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                other => {
+                                    if backslash_active {
+                                        match other {
+                                            't' | 'n' | 'r' => {
+                                                output.push(other);
+                                                backslash_active = false;
+                                            }
+                                            esc => return Err(ScanError::UnknownStrEscape(esc)),
+                                        }
+                                    } else {
+                                        output.push(other)
+                                    }
+                                }
+                            }
+
+                            pos.col += 1;
+                        }
+
+                        Ok(TokenInner::Str(output.iter().collect()))
+                    }
                     '\'' => match input.next().ok_or(ScanError::UnexpectedEof)? {
                         '\'' => Err(ScanError::EmptyCharLiteral),
                         c => match input.next().ok_or(ScanError::UnexpectedEof)? {
@@ -321,16 +364,16 @@ mod tests {
     #[test]
     fn basic_strings() {
         assert_eq!(
-            launch(Meta::new(None), "\"Hello there!\"").unwrap()[0],
+            launch(Meta::new(None), r#""Hello there!""#).unwrap()[0],
             Token {
-                inner: TokenInner::Str("Hello there!".to_string()),
+                inner: TokenInner::Str(r#"Hello there!"#.to_string()),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
-            launch(Meta::new(None), "\"Hello ther\\e!\"").unwrap()[0],
+            launch(Meta::new(None), r#""Hello th\\ere!""#).unwrap()[0],
             Token {
-                inner: TokenInner::Str("Hello ther\\e!".to_string()),
+                inner: TokenInner::Str(r#"Hello th\ere!"#.to_string()),
                 pos: MetaPos { line: 1, col: 1 }
             }
         )
