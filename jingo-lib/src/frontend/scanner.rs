@@ -81,6 +81,7 @@ pub enum TokenInner {
     Str(String),
     Char(char),
     Number(i64),
+    Float(f64),
 
     // phantom (special; not added to output)
     Eof,
@@ -153,48 +154,7 @@ impl Token {
                         }
                         _ => Ok(TokenInner::Greater),
                     },
-                    '"' => {
-                        let mut output = vec![];
-                        let mut backslash_active = false;
-
-                        loop {
-                            match input.next().ok_or(ScanError::UnexpectedEof)? {
-                                '\\' => {
-                                    if backslash_active {
-                                        output.push('\\');
-                                        backslash_active = false;
-                                    } else {
-                                        backslash_active = true;
-                                    }
-                                }
-                                '"' => {
-                                    if backslash_active {
-                                        output.push('"');
-                                        backslash_active = false;
-                                    } else {
-                                        break;
-                                    }
-                                }
-                                other => {
-                                    if backslash_active {
-                                        match other {
-                                            't' | 'n' | 'r' => {
-                                                output.push(other);
-                                                backslash_active = false;
-                                            }
-                                            esc => return Err(ScanError::UnknownStrEscape(esc)),
-                                        }
-                                    } else {
-                                        output.push(other)
-                                    }
-                                }
-                            }
-
-                            pos.col += 1;
-                        }
-
-                        Ok(TokenInner::Str(output.iter().collect()))
-                    }
+                    '"' => Ok(TokenInner::Str(get_str_content(pos, input)?)),
                     '\'' => match input.next().ok_or(ScanError::UnexpectedEof)? {
                         '\'' => Err(ScanError::EmptyCharLiteral),
                         c => match input.next().ok_or(ScanError::UnexpectedEof)? {
@@ -205,6 +165,7 @@ impl Token {
                             err_c => Err(ScanError::InvalidCharEscape(err_c)),
                         },
                     },
+
                     _ => todo!("identifiers"),
                 },
                 None => Ok(TokenInner::Eof),
@@ -223,6 +184,53 @@ impl From<Token> for MetaPos {
     fn from(token: Token) -> Self {
         token.pos
     }
+}
+
+/// Scans a raw char input for a valid [TokenType::Str]
+fn get_str_content(
+    pos: &mut MetaPos,
+    input: &mut Peekable<impl Iterator<Item = char>>,
+) -> Result<String, ScanError> {
+    let mut output = vec![];
+    let mut backslash_active = false;
+
+    loop {
+        match input.next().ok_or(ScanError::UnexpectedEof)? {
+            '\\' => {
+                if backslash_active {
+                    output.push('\\');
+                    backslash_active = false;
+                } else {
+                    backslash_active = true;
+                }
+            }
+            '"' => {
+                if backslash_active {
+                    output.push('"');
+                    backslash_active = false;
+                } else {
+                    break;
+                }
+            }
+            other => {
+                if backslash_active {
+                    match other {
+                        't' | 'n' | 'r' => {
+                            output.push(other);
+                            backslash_active = false;
+                        }
+                        esc => return Err(ScanError::UnknownStrEscape(esc)),
+                    }
+                } else {
+                    output.push(other)
+                }
+            }
+        }
+
+        pos.col += 1;
+    }
+
+    Ok(output.iter().collect())
 }
 
 /// Scan given input into a vector of [Token] for further compilation
@@ -377,5 +385,37 @@ mod tests {
                 pos: MetaPos { line: 1, col: 1 }
             }
         )
+    }
+
+    #[test]
+    fn numlit() {
+        assert_eq!(
+            launch(Meta::new(None), "45635463465").unwrap()[0],
+            Token {
+                inner: TokenInner::Number(45635463465),
+                pos: MetaPos { line: 1, col: 1 }
+            }
+        );
+        assert_eq!(
+            launch(Meta::new(None), "0").unwrap()[0],
+            Token {
+                inner: TokenInner::Number(0),
+                pos: MetaPos { line: 1, col: 1 }
+            }
+        );
+        assert_eq!(
+            launch(Meta::new(None), "-0").unwrap()[0],
+            Token {
+                inner: TokenInner::Number(-0),
+                pos: MetaPos { line: 1, col: 1 }
+            }
+        );
+        assert_eq!(
+            launch(Meta::new(None), "-45635463465").unwrap()[0],
+            Token {
+                inner: TokenInner::Number(-45635463465),
+                pos: MetaPos { line: 1, col: 1 }
+            }
+        );
     }
 }
