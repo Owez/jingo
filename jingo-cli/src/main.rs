@@ -69,7 +69,7 @@ fn msg_exit(msg: impl fmt::Display) -> ! {
 
 /// Shows error message then exits with code 1
 fn error_exit(msg: impl fmt::Display) -> ! {
-    msg_exit(format!("Error: {}", msg));
+    msg_exit(format!("Error in cli\n  {}", msg));
 }
 
 /// Shows error help message then exits with code 1
