@@ -8,3 +8,6 @@ license = "MIT"
 repository = "https://github.com/owez/jingo"
 readme = "../README.md"
 edition = "2018"
+
+[dependencies.jingo-lib]
+path = "../jingo-lib"
