@@ -1,2 +1,15 @@
 [workspace]
 members = ["jingo-cli", "jingo-lib"]
+
+[dependencies.jingo-lib]
+path = "../jingo-lib"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.release.package.'*']
+opt-level = 3
+codegen-units = 1
