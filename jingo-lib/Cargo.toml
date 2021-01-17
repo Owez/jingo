@@ -1,5 +1,6 @@
 [package]
 name = "jingo-lib"
+description = "A lightweight, high-level language designed for rapid prototyping"
 version = "0.1.0"
 authors = ["Owez <root@ogriffiths.com>"]
 repository = "https://github.com/owez/jingo"

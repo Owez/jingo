@@ -1,5 +1,6 @@
 [package]
 name = "jingo-cli"
+description = "A lightweight, high-level language designed for rapid prototyping"
 publish = false
 version = "0.1.0"
 authors = ["Owez <root@ogriffiths.com>"]
