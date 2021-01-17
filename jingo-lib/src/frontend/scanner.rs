@@ -219,9 +219,7 @@ fn get_comment_content(
     Ok(output.trim().to_string())
 }
 
-/// Scans a raw char input for a valid [TokenInner::Minus], [TokenInner::Int],
-/// [TokenInner::Float], [TokenInner::Comment] or [TokenInner::DocStr]. Essentially
-/// anything starting with `-` as it's syntax
+/// Scans a raw char input for a valid [TokenInner::Comment] or [TokenInner::DocStr]
 fn get_dash_content(
     pos: &mut MetaPos,
     input: &mut Peekable<impl Iterator<Item = char>>,
@@ -237,7 +235,6 @@ fn get_dash_content(
                 _ => Ok(TokenInner::Comment(get_comment_content(pos, input)?)),
             }
         }
-        Some('0'..='9') => get_num_content(pos, input, '-'),
         _ => Ok(TokenInner::Minus),
     }
 }
@@ -305,7 +302,7 @@ fn get_num_content(
         };
 
         match cur_char {
-            '0'..='9' => numstr.push(*cur_char),
+            '0'..='9' => (),
             '.' => {
                 if is_float {
                     return Err(ScanError::MultipleDots);
@@ -316,6 +313,7 @@ fn get_num_content(
             _ => break,
         }
 
+        numstr.push(*cur_char);
         input.next();
     }
 
@@ -503,20 +501,6 @@ mod tests {
             launch(Meta::new(None), "0").unwrap()[0],
             Token {
                 inner: TokenInner::Int(0),
-                pos: MetaPos { line: 1, col: 1 }
-            }
-        );
-        assert_eq!(
-            launch(Meta::new(None), "-0").unwrap()[0],
-            Token {
-                inner: TokenInner::Int(-0),
-                pos: MetaPos { line: 1, col: 1 }
-            }
-        );
-        assert_eq!(
-            launch(Meta::new(None), "-45635463465").unwrap()[0],
-            Token {
-                inner: TokenInner::Int(-45635463465),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
