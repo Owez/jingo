@@ -1,5 +1,8 @@
 # Jingo
 
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fowez%2Fjingo%2Fbadge&style=for-the-badge)](https://actions-badge.atrox.dev/owez/jingo/goto)
+![License](https://img.shields.io/github/license/owez/jingo?style=for-the-badge)
+
 ## Installation
 
 1. Clone this repository
