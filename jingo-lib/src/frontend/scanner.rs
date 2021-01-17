@@ -272,7 +272,7 @@ fn get_str_content(
                 if backslash_active {
                     match other {
                         't' | 'n' | 'r' => {
-                            output.push(other);
+                            output.push(other); // TODO: fix
                             backslash_active = false;
                         }
                         esc => return Err(ScanError::UnknownStrEscape(esc)),
@@ -282,9 +282,9 @@ fn get_str_content(
                 }
             }
         }
-
-        pos.col += 1;
     }
+
+    pos.col += output.len();
 
     Ok(output)
 }
@@ -317,9 +317,9 @@ fn get_num_content(
         }
 
         input.next();
-
-        pos.col += 1
     }
+
+    pos.col += numstr.len() - 1;
 
     Ok(if is_float {
         TokenInner::Float(
@@ -491,8 +491,7 @@ mod tests {
     }
 
     #[test]
-    fn intlit() {
-        // TODO: in-depth testing
+    fn basic_int() {
         assert_eq!(
             launch(Meta::new(None), "45635463465").unwrap()[0],
             Token {
@@ -523,7 +522,99 @@ mod tests {
         );
     }
 
+    #[test]
+    fn int_int_combo() {
+        assert_eq!(
+            launch(Meta::new(None), "78956456+87685446+324345345").unwrap(),
+            vec![
+                Token {
+                    inner: TokenInner::Int(78956456),
+                    pos: MetaPos { line: 1, col: 1 }
+                },
+                Token {
+                    inner: TokenInner::Plus,
+                    pos: MetaPos { line: 1, col: 9 }
+                },
+                Token {
+                    inner: TokenInner::Int(87685446),
+                    pos: MetaPos { line: 1, col: 10 }
+                },
+                Token {
+                    inner: TokenInner::Plus,
+                    pos: MetaPos { line: 1, col: 18 }
+                },
+                Token {
+                    inner: TokenInner::Int(324345345),
+                    pos: MetaPos { line: 1, col: 19 }
+                },
+            ]
+        )
+    }
+
+    #[test]
+    fn basic_float() {
+        assert_eq!(
+            launch(Meta::new(None), "45.34234").unwrap()[0],
+            Token {
+                inner: TokenInner::Float(45.34234),
+                pos: MetaPos { line: 1, col: 1 }
+            }
+        );
+        assert_eq!(
+            launch(Meta::new(None), "0.0").unwrap()[0],
+            Token {
+                inner: TokenInner::Float(0.0),
+                pos: MetaPos { line: 1, col: 1 }
+            }
+        );
+    }
+
+    #[test]
+    fn float_int_combo() {
+        assert_eq!(
+            launch(Meta::new(None), "453495.344294394+342342").unwrap(),
+            vec![
+                Token {
+                    inner: TokenInner::Float(453495.344294394),
+                    pos: MetaPos { line: 1, col: 1 }
+                },
+                Token {
+                    inner: TokenInner::Plus,
+                    pos: MetaPos { line: 1, col: 17 }
+                },
+                Token {
+                    inner: TokenInner::Int(342342),
+                    pos: MetaPos { line: 1, col: 18 }
+                },
+            ]
+        );
+        assert_eq!(
+            launch(Meta::new(None), "4534342+3435345.3453-32324").unwrap(),
+            vec![
+                Token {
+                    inner: TokenInner::Int(4534342),
+                    pos: MetaPos { line: 1, col: 1 }
+                },
+                Token {
+                    inner: TokenInner::Plus,
+                    pos: MetaPos { line: 1, col: 8 }
+                },
+                Token {
+                    inner: TokenInner::Float(3435345.3453),
+                    pos: MetaPos { line: 1, col: 9 }
+                },
+                Token {
+                    inner: TokenInner::Minus,
+                    pos: MetaPos { line: 1, col: 21 }
+                },
+                Token {
+                    inner: TokenInner::Int(32324),
+                    pos: MetaPos { line: 1, col: 22 }
+                },
+            ]
+        )
+    }
+
     // TODO: docstr test
     // TODO: comment test
-    // TODO: float test
 }
