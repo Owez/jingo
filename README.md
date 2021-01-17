@@ -16,6 +16,8 @@ A lightweight, high-level language designed for rapid prototyping
 ```none
 Usage: jingo [OPTIONS]
 
+A lightweight, high-level language designed for rapid prototyping
+
 Options:
   run [FILE] — Compiles & runs a file
   compile [FILE] — Compiles a file
