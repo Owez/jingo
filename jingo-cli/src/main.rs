@@ -5,7 +5,7 @@ use std::io::prelude::*;
 use std::{env, fmt, fs::File, path::PathBuf, process};
 
 /// Help infomation
-const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  compile [FILE] — Compiles a file\n  help — Shows this help\n\nAdvanced options:\n  scan [FILE] — Returns scanning stage only";
+const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nA lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  compile [FILE] — Compiles a file\n  help — Shows this help\n\nAdvanced options:\n  scan [FILE] — Returns scanning stage only";
 
 /// Command to run
 #[derive(Debug, Clone, PartialEq)]
