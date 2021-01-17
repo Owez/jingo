@@ -136,23 +136,7 @@ impl Token {
                     }
                     ' ' | '\t' => Ok(TokenInner::Whitespace),
                     '+' => Ok(TokenInner::Plus),
-                    '-' => match input.peek() {
-                        Some(&'-') => {
-                            input.next();
-
-                            match input.next() {
-                                Some('-') => {
-                                    pos.col += 2;
-                                    Ok(TokenInner::DocStr(get_comment_content(pos, input)?))
-                                }
-                                _ => {
-                                    pos.col += 1;
-                                    Ok(TokenInner::Comment(get_comment_content(pos, input)?))
-                                }
-                            }
-                        }
-                        _ => Ok(TokenInner::Minus),
-                    },
+                    '-' => get_dash_content(pos, input),
                     '=' => match input.peek() {
                         Some(&'=') => {
                             input.next();
@@ -233,6 +217,29 @@ fn get_comment_content(
     }
 
     Ok(output.trim().to_string())
+}
+
+/// Scans a raw char input for a valid [TokenInner::Minus], [TokenInner::Int],
+/// [TokenInner::Float], [TokenInner::Comment] or [TokenInner::DocStr]. Essentially
+/// anything starting with `-` as it's syntax
+fn get_dash_content(
+    pos: &mut MetaPos,
+    input: &mut Peekable<impl Iterator<Item = char>>,
+) -> Result<TokenInner, ScanError> {
+    let peeked = input.peek();
+
+    match peeked {
+        Some('-') => {
+            input.next();
+
+            match input.next() {
+                Some('-') => Ok(TokenInner::DocStr(get_comment_content(pos, input)?)),
+                _ => Ok(TokenInner::Comment(get_comment_content(pos, input)?)),
+            }
+        }
+        Some('0'..='9') => get_num_content(pos, input, '-'),
+        _ => Ok(TokenInner::Minus),
+    }
 }
 
 /// Scans a raw char input for a valid [TokenInner::Str]
@@ -485,6 +492,7 @@ mod tests {
 
     #[test]
     fn intlit() {
+        // TODO: in-depth testing
         assert_eq!(
             launch(Meta::new(None), "45635463465").unwrap()[0],
             Token {
@@ -517,6 +525,5 @@ mod tests {
 
     // TODO: docstr test
     // TODO: comment test
-    // TODO: int test
     // TODO: float test
 }
