@@ -18,6 +18,7 @@ pub enum ScanError {
     MultipleDots,
     InvalidFloat(ParseFloatError),
     InvalidInt(ParseIntError),
+    InvalidId(String),
 }
 
 impl fmt::Display for ScanError {
@@ -35,6 +36,7 @@ impl fmt::Display for ScanError {
             ScanError::MultipleDots => write!(f, "Number given as multiple dots"),
             ScanError::InvalidFloat(err) => write!(f, "Could not parse float, {}", err),
             ScanError::InvalidInt(err) => write!(f, "Could not parse int, {}", err),
+            ScanError::InvalidId(id) => write!(f, "The string '{}' is not a valid identifier", id),
         }
     }
 }
@@ -96,6 +98,28 @@ pub enum TokenInner {
 
     // phantom (special; not added to output)
     Eof,
+}
+
+impl TokenInner {
+    /// Matches `input` to keywords and returns if one is matched
+    pub fn new_keyword(input: impl AsRef<str>) -> Option<Self> {
+        match input.as_ref() {
+            "if" => Some(TokenInner::If),
+            "and" => Some(TokenInner::And),
+            "or" => Some(TokenInner::Or),
+            "else" => Some(TokenInner::Else),
+            "true" => Some(TokenInner::True),
+            "false" => Some(TokenInner::False),
+            "none" => Some(TokenInner::None),
+            "class" => Some(TokenInner::Class),
+            "for" => Some(TokenInner::For),
+            "while" => Some(TokenInner::While),
+            "return" => Some(TokenInner::Return),
+            "this" => Some(TokenInner::This),
+            "var" => Some(TokenInner::Var),
+            _ => None,
+        }
+    }
 }
 
 /// Represents a token with a token type + data (i.e. [TokenInner]) along with
@@ -177,7 +201,14 @@ impl Token {
                         },
                     },
                     '0'..='9' => get_num_content(pos, input, c),
-                    _ => todo!("identifiers"),
+                    id_start => {
+                        let id = get_id_content(pos, input, id_start)?;
+
+                        match TokenInner::new_keyword(&id) {
+                            Some(token_inner) => Ok(token_inner),
+                            None => Ok(TokenInner::Id(id)),
+                        }
+                    }
                 },
                 None => Ok(TokenInner::Eof),
             }?,
@@ -335,6 +366,17 @@ fn get_num_content(
                 .map_err(|err| ScanError::InvalidInt(err))?,
         )
     })
+}
+
+/// Scans a raw char input for a valid string to be used for a [TokenInner::Id]
+/// or keyword matching downstream. This may return [ScanError::InvalidId] for
+/// badly formatted identifiers so this should be used as the last match
+fn get_id_content(
+    pos: &mut MetaPos,
+    input: &mut Peekable<impl Iterator<Item = char>>,
+    start: char,
+) -> Result<String, ScanError> {
+    todo!("id scan")
 }
 
 /// Scan given input into a vector of [Token] for further compilation
@@ -646,4 +688,7 @@ mod tests {
             ]
         );
     }
+
+    // TODO: keyword test
+    // TODO: identifier test
 }
