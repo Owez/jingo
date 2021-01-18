@@ -126,3 +126,26 @@ fn main() {
         other => todo!("Finish ran '{:?}' command", other),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basic_parse() {
+        assert_eq!(
+            Parsed::custom(vec!["scan".to_string(), "test".to_string()]),
+            Parsed {
+                command: Command::Scan,
+                data: vec!["test".to_string()]
+            }
+        );
+        assert_eq!(
+            Parsed::custom(vec!["help".to_string()]),
+            Parsed {
+                command: Command::Scan,
+                data: vec![]
+            }
+        )
+    }
+}
