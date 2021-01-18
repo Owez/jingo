@@ -230,8 +230,11 @@ fn get_dash_content(
         Some('-') => {
             input.next();
 
-            match input.next() {
-                Some('-') => Ok(TokenInner::DocStr(get_comment_content(pos, input)?)),
+            match input.peek() {
+                Some('-') => {
+                    input.next();
+                    Ok(TokenInner::DocStr(get_comment_content(pos, input)?))
+                }
                 _ => Ok(TokenInner::Comment(get_comment_content(pos, input)?)),
             }
         }
@@ -599,6 +602,48 @@ mod tests {
         )
     }
 
-    // TODO: docstr test
-    // TODO: comment test
+    #[test]
+    fn comment_docstr() {
+        assert_eq!(
+            launch(
+                Meta::new(None),
+                "--comment\n---         docstr\n+--- docstr\n----docstr\n- --    comment"
+            )
+            .unwrap(),
+            vec![
+                Token {
+                    inner: TokenInner::Comment("comment".to_string()),
+                    pos: MetaPos { line: 1, col: 1 }
+                },
+                Token {
+                    inner: TokenInner::DocStr("docstr".to_string()),
+                    pos: MetaPos { line: 2, col: 1 }
+                },
+                Token {
+                    inner: TokenInner::Plus,
+                    pos: MetaPos { line: 3, col: 1 }
+                },
+                Token {
+                    inner: TokenInner::DocStr("docstr".to_string()),
+                    pos: MetaPos { line: 3, col: 2 }
+                },
+                Token {
+                    inner: TokenInner::DocStr("-docstr".to_string()),
+                    pos: MetaPos { line: 4, col: 1 }
+                },
+                Token {
+                    inner: TokenInner::Minus,
+                    pos: MetaPos { line: 5, col: 1 }
+                },
+                Token {
+                    inner: TokenInner::Whitespace,
+                    pos: MetaPos { line: 5, col: 2 }
+                },
+                Token {
+                    inner: TokenInner::Comment("comment".to_string()),
+                    pos: MetaPos { line: 5, col: 3 }
+                },
+            ]
+        );
+    }
 }
