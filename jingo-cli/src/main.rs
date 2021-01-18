@@ -114,7 +114,7 @@ fn run_scan(parsed: Parsed) {
 
     match scanned {
         Ok(output) => println!("Scanned output:\n{:#?}", output),
-        Err((err, meta)) => msg_exit(meta.error(err)),
+        Err((err, meta)) => msg_exit(meta.error(err, "scanning")),
     }
 }
 

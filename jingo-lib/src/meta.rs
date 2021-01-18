@@ -61,15 +61,28 @@ impl Meta {
     }
 
     /// Returns a standardized compilation error
-    pub fn error(&self, err: impl fmt::Display) -> String {
+    pub fn error(
+        &self,
+        err: impl fmt::Display,
+        whilst_msg: impl Into<Option<&'static str>>,
+    ) -> String {
+        let whilst_msg = match whilst_msg.into() {
+            Some(string) => format!(" whilst {}", string),
+            None => String::new(),
+        };
+
         match &self.path {
             Some(path) => format!(
-                "Error {}:{}\n  {}",
+                "Error{} {}:{}\n  {}",
+                whilst_msg,
                 std::env::current_dir().unwrap().join(path).display(),
                 self.pos,
                 err
             ),
-            None => format!("Error in unknown file {}\n  {}", self.pos, err),
+            None => format!(
+                "Error in unknown file{} {}\n  {}",
+                whilst_msg, self.pos, err
+            ),
         }
     }
 

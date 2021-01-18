@@ -164,6 +164,8 @@ impl Token {
                     '=' => match input.peek() {
                         Some(&'=') => {
                             input.next();
+                            pos.col += 1;
+
                             Ok(TokenInner::EqualsEquals)
                         }
                         _ => Ok(TokenInner::Equals),
@@ -171,6 +173,8 @@ impl Token {
                     '!' => match input.peek() {
                         Some(&'=') => {
                             input.next();
+                            pos.col += 1;
+
                             Ok(TokenInner::ExclaimEquals)
                         }
                         _ => Ok(TokenInner::Exclaim),
@@ -178,6 +182,8 @@ impl Token {
                     '<' => match input.peek() {
                         Some(&'=') => {
                             input.next();
+                            pos.col += 1;
+
                             Ok(TokenInner::LessEquals)
                         }
                         _ => Ok(TokenInner::Less),
@@ -185,6 +191,8 @@ impl Token {
                     '>' => match input.peek() {
                         Some(&'=') => {
                             input.next();
+                            pos.col += 1;
+
                             Ok(TokenInner::GreaterEquals)
                         }
                         _ => Ok(TokenInner::Greater),
