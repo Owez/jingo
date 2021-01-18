@@ -35,6 +35,7 @@ impl Parsed {
 
     /// Parses custom arguments
     fn custom(args: Vec<String>) -> Self {
+        // TODO: use [OsString]
         if args.len() == 0 {
             help_exit("No arguments passed");
         }

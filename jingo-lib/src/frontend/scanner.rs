@@ -18,7 +18,6 @@ pub enum ScanError {
     MultipleDots,
     InvalidFloat(ParseFloatError),
     InvalidInt(ParseIntError),
-    InvalidId(String),
 }
 
 impl fmt::Display for ScanError {
@@ -36,7 +35,6 @@ impl fmt::Display for ScanError {
             ScanError::MultipleDots => write!(f, "Number given as multiple dots"),
             ScanError::InvalidFloat(err) => write!(f, "Could not parse float, {}", err),
             ScanError::InvalidInt(err) => write!(f, "Could not parse int, {}", err),
-            ScanError::InvalidId(id) => write!(f, "The string '{}' is not a valid identifier", id),
         }
     }
 }
@@ -384,7 +382,22 @@ fn get_id_content(
     input: &mut Peekable<impl Iterator<Item = char>>,
     start: char,
 ) -> Result<String, ScanError> {
-    todo!("id scan")
+    let mut output = String::from(start);
+
+    loop {
+        let peeked = input.peek();
+
+        match peeked {
+            Some('a'..='z') | Some('A'..='Z') | Some('0'..='9') | Some('_') => {
+                output.push(input.next().unwrap())
+            }
+            _ => break,
+        }
+    }
+
+    pos.col += output.len();
+
+    Ok(output)
 }
 
 /// Scan given input into a vector of [Token] for further compilation
