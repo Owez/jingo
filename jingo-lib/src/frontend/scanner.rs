@@ -84,6 +84,7 @@ pub enum TokenInner {
     Return,
     This,
     Var,
+    Fun,
 
     // literals
     Id(String),
@@ -115,8 +116,9 @@ impl TokenInner {
             "for" => Some(TokenInner::For),
             "while" => Some(TokenInner::While),
             "return" => Some(TokenInner::Return),
-            "this" => Some(TokenInner::This),
+            "self" => Some(TokenInner::This),
             "var" => Some(TokenInner::Var),
+            "fun" => Some(TokenInner::Fun),
             _ => None,
         }
     }
