@@ -26,7 +26,7 @@ impl MetaPos {
     /// Resets for newline
     pub fn newline(&mut self, times: usize) {
         self.line += times;
-        self.col = 0;
+        self.col = 1;
     }
 }
 
