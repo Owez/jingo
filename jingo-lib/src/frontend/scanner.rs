@@ -18,6 +18,7 @@ pub enum ScanError {
     MultipleDots,
     InvalidFloat(ParseFloatError),
     InvalidInt(ParseIntError),
+    UnknownToken(char),
 }
 
 impl fmt::Display for ScanError {
@@ -35,6 +36,7 @@ impl fmt::Display for ScanError {
             ScanError::MultipleDots => write!(f, "Number given as multiple dots"),
             ScanError::InvalidFloat(err) => write!(f, "Could not parse float, {}", err),
             ScanError::InvalidInt(err) => write!(f, "Could not parse int, {}", err),
+            ScanError::UnknownToken(c) => write!(f, "Unknown token or start of token '{}'", c),
         }
     }
 }
@@ -139,9 +141,11 @@ impl Token {
     ) -> Result<Self, ScanError> {
         pos.col += 1;
 
+        let got_next = input.next();
+
         Ok(Self {
             pos: pos.clone(),
-            inner: match input.next() {
+            inner: match got_next {
                 Some(c) => match c {
                     '(' => Ok(TokenInner::ParenLeft),
                     ')' => Ok(TokenInner::ParenRight),
@@ -207,14 +211,15 @@ impl Token {
                         },
                     },
                     '0'..='9' => get_num_content(pos, input, c),
-                    id_start => {
-                        let id = get_id_content(pos, input, id_start)?;
+                    'a'..='z' | 'A'..='Z' | '_' => {
+                        let id = get_id_content(pos, input, got_next.unwrap())?;
 
                         match TokenInner::new_keyword(&id) {
                             Some(token_inner) => Ok(token_inner),
                             None => Ok(TokenInner::Id(id)),
                         }
                     }
+                    unknown => Err(ScanError::UnknownToken(unknown)),
                 },
                 None => Ok(TokenInner::Eof),
             }?,
