@@ -139,72 +139,115 @@ impl Token {
         pos: &mut MetaPos,
         input: &mut Peekable<impl Iterator<Item = char>>,
     ) -> Result<Self, ScanError> {
-        pos.col += 1;
-
         let got_next = input.next();
 
         Ok(Self {
             pos: pos.clone(),
             inner: match got_next {
                 Some(c) => match c {
-                    '(' => Ok(TokenInner::ParenLeft),
-                    ')' => Ok(TokenInner::ParenRight),
-                    '{' => Ok(TokenInner::BraceLeft),
-                    '}' => Ok(TokenInner::BraceRight),
-                    ',' => Ok(TokenInner::Comma),
-                    '.' => Ok(TokenInner::Dot),
-                    ';' => Ok(TokenInner::Semicolon),
-                    '/' => Ok(TokenInner::FwdSlash),
-                    '*' => Ok(TokenInner::Star),
+                    '(' => {
+                        pos.col += 1;
+                        Ok(TokenInner::ParenLeft)
+                    }
+                    ')' => {
+                        pos.col += 1;
+                        Ok(TokenInner::ParenRight)
+                    }
+                    '{' => {
+                        pos.col += 1;
+                        Ok(TokenInner::BraceLeft)
+                    }
+                    '}' => {
+                        pos.col += 1;
+                        Ok(TokenInner::BraceRight)
+                    }
+                    ',' => {
+                        pos.col += 1;
+                        Ok(TokenInner::Comma)
+                    }
+                    '.' => {
+                        pos.col += 1;
+                        Ok(TokenInner::Dot)
+                    }
+                    ';' => {
+                        pos.col += 1;
+                        Ok(TokenInner::Semicolon)
+                    }
+                    '/' => {
+                        pos.col += 1;
+                        Ok(TokenInner::FwdSlash)
+                    }
+                    '*' => {
+                        pos.col += 1;
+                        Ok(TokenInner::Star)
+                    }
                     '\n' => {
                         pos.newline(1);
                         Ok(TokenInner::Newline)
                     }
-                    ' ' | '\t' => Ok(TokenInner::Whitespace),
-                    '+' => Ok(TokenInner::Plus),
+                    ' ' | '\t' => {
+                        pos.col += 1;
+                        Ok(TokenInner::Whitespace)
+                    }
+                    '+' => {
+                        pos.col += 1;
+                        Ok(TokenInner::Plus)
+                    }
                     '-' => get_dash_content(pos, input),
                     '=' => match input.peek() {
                         Some(&'=') => {
+                            pos.col += 2;
                             input.next();
-                            pos.col += 1;
 
                             Ok(TokenInner::EqualsEquals)
                         }
-                        _ => Ok(TokenInner::Equals),
+                        _ => {
+                            pos.col += 1;
+                            Ok(TokenInner::Equals)
+                        }
                     },
                     '!' => match input.peek() {
                         Some(&'=') => {
+                            pos.col += 2;
                             input.next();
-                            pos.col += 1;
 
                             Ok(TokenInner::ExclaimEquals)
                         }
-                        _ => Ok(TokenInner::Exclaim),
+                        _ => {
+                            pos.col += 1;
+                            Ok(TokenInner::Exclaim)
+                        }
                     },
                     '<' => match input.peek() {
                         Some(&'=') => {
+                            pos.col += 2;
                             input.next();
-                            pos.col += 1;
 
                             Ok(TokenInner::LessEquals)
                         }
-                        _ => Ok(TokenInner::Less),
+                        _ => {
+                            pos.col += 1;
+                            Ok(TokenInner::Less)
+                        }
                     },
                     '>' => match input.peek() {
                         Some(&'=') => {
                             input.next();
-                            pos.col += 1;
+                            pos.col += 2;
 
                             Ok(TokenInner::GreaterEquals)
                         }
-                        _ => Ok(TokenInner::Greater),
+                        _ => {
+                            pos.col += 1;
+                            Ok(TokenInner::Greater)
+                        }
                     },
                     '"' => Ok(TokenInner::Str(get_str_content(pos, input)?)),
                     '\'' => match input.next().ok_or(ScanError::UnexpectedEof)? {
                         '\'' => Err(ScanError::EmptyCharLiteral),
                         c => match input.next().ok_or(ScanError::UnexpectedEof)? {
                             '\'' => {
-                                pos.col += 2;
+                                pos.col += 3;
                                 Ok(TokenInner::Char(c))
                             }
                             err_c => Err(ScanError::InvalidCharEscape(err_c)),
@@ -280,7 +323,10 @@ fn get_dash_content(
                 _ => Ok(TokenInner::Comment(get_comment_content(pos, input)?)),
             }
         }
-        _ => Ok(TokenInner::Minus),
+        _ => {
+            pos.col += 1;
+            Ok(TokenInner::Minus)
+        }
     }
 }
 
@@ -326,7 +372,7 @@ fn get_str_content(
         }
     }
 
-    pos.col += output.len();
+    pos.col += output.len() + 1;
 
     Ok(output)
 }
@@ -362,7 +408,7 @@ fn get_num_content(
         input.next();
     }
 
-    pos.col += numstr.len() - 1;
+    pos.col += numstr.len();
 
     Ok(if is_float {
         TokenInner::Float(

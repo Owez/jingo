@@ -20,7 +20,7 @@ pub struct MetaPos {
 impl MetaPos {
     /// Creates a new [MetaPos] with appropriate blank values
     pub fn new() -> Self {
-        Self { line: 1, col: 0 }
+        Self { line: 1, col: 1 }
     }
 
     /// Resets for newline
