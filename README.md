@@ -5,6 +5,10 @@
 
 A lightweight, high-level language designed for rapid prototyping
 
+## Guide
+
+Included in the compiler repository is the "The Jingo Book", a simple guide and specification to the Jingo language. You may find the book online [here]((https://github.com/Owez/jingo/blob/master/book.md)).
+
 ## Installation
 
 1. Clone this repository
