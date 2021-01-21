@@ -58,6 +58,9 @@ pub enum TokenInner {
     Newline,
     Whitespace,
 
+    // multi-char
+    Static,
+
     // math-only symbols
     Plus,
     Minus,
@@ -171,6 +174,13 @@ impl Token {
                         pos.col += 1;
                         Ok(TokenInner::Dot)
                     }
+                    ':' => match input.next().ok_or(ScanError::UnexpectedEof)? {
+                        ':' => {
+                            pos.col += 2;
+                            Ok(TokenInner::Static)
+                        }
+                        _ => Err(ScanError::UnknownToken(':')),
+                    },
                     ';' => {
                         pos.col += 1;
                         Ok(TokenInner::Semicolon)
@@ -760,6 +770,25 @@ mod tests {
                     pos: MetaPos { line: 5, col: 3 }
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn static_token() {
+        assert_eq!(
+            launch(Meta::new(None), "::").unwrap()[0],
+            Token {
+                inner: TokenInner::Static,
+                pos: MetaPos::new()
+            }
+        );
+        assert_eq!(
+            launch(Meta::new(None), ":"),
+            Err((ScanError::UnexpectedEof, Meta::new(None)))
+        );
+        assert_eq!(
+            launch(Meta::new(None), ": "),
+            Err((ScanError::UnknownToken(':'), Meta::new(None)))
         );
     }
 
