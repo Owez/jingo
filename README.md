@@ -5,10 +5,6 @@
 
 A lightweight, high-level language designed for rapid prototyping
 
-## Guide
-
-You may find a guide and specification to using Jingo or help with contributing to the compiler online [here](https://github.com/Owez/jingo/wiki), located as the GitHub wiki section.
-
 ## Installation
 
 1. Clone this repository
