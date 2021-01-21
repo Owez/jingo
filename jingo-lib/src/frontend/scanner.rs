@@ -201,6 +201,7 @@ impl Token {
                         pos.col += 1;
                         Ok(TokenInner::Whitespace)
                     }
+                    '\r' => Ok(TokenInner::Whitespace), // special because windows
                     '+' => {
                         pos.col += 1;
                         Ok(TokenInner::Plus)
