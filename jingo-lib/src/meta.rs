@@ -40,8 +40,7 @@ impl fmt::Display for MetaPos {
 /// moment, typically used for standardized error reporting
 ///
 /// For each stage of compilation, this should be directly handed over as a mutable
-/// which should be cloned from a "blank" [Meta], as no stage resets items such
-/// as [Meta::line]
+/// which should be cloned from a "blank" [Meta] structure
 #[derive(Debug, Clone, PartialEq)]
 pub struct Meta {
     /// Path that is currently being parsed
