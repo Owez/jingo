@@ -29,6 +29,12 @@ Advanced options:
 
 ## Under the hood
 
-This repository may count as both a transpiler and compiler; the Jingo syntax is parsed then transpiled to a simple [LISP](https://en.wikipedia.org/wiki/Lisp_(programming_language)) intermediate representation which is further compiled into a single static binary. This approach allows easier implementation of Jingo using a widely used and understood technology, as well as the future possibility of importing LISP-based code/modules.
+The main general ruling Jingo sticks to for its syntax are:
+
+- Class-based OOP
+- Dynamic
+- Expression-centric; everything is an expression
+
+As for compiler backends, this repository may count as both a transpiler and compiler; the Jingo syntax is parsed then transpiled to a simple [LISP](https://en.wikipedia.org/wiki/Lisp_(programming_language)) intermediate representation which is further compiled into a single static binary. This approach allows easier implementation of Jingo using a widely used and understood technology, as well as the future possibility of importing LISP-based code/modules.
 
 Despite this, Jingo is not intended to be an abstract LISP flavour and considers it to be a suitable and extendible compiler backend, similar to other options like [LLVM](https://en.wikipedia.org/wiki/LLVM) or [cranelift](https://github.com/bytecodealliance/wasmtime/tree/main/cranelift).
