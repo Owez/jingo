@@ -5,7 +5,7 @@ use std::io::prelude::*;
 use std::{env, fmt, fs::File, path::PathBuf, process};
 
 /// Help infomation
-const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nA lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  compile [FILE] — Compiles a file\n  help — Shows this help\n\nAdvanced options:\n  scan [FILE] — Returns scanning stage only";
+const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nA lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  build [FILE] — Compiles a file\n  help — Shows this help\n\nAdvanced options:\n  scan [FILE] — Returns scanning stage only\n  parse [FILE] — Returns parsing stage only";
 
 /// Command to run
 #[derive(Debug, Clone, PartialEq)]
@@ -13,6 +13,7 @@ enum Command {
     Compile,
     Run,
     Scan,
+    Parse,
 }
 
 /// Parsed cli
@@ -55,6 +56,10 @@ impl Parsed {
             },
             "scan" => Self {
                 command: Command::Scan,
+                data: args[1..].to_vec(),
+            },
+            "parse" => Self {
+                command: Command::Parse,
                 data: args[1..].to_vec(),
             },
             _ => help_exit(format!("Command '{}' not recognised", args[0])),
@@ -102,7 +107,7 @@ fn open_file(filepath: impl Into<PathBuf>) -> String {
     contents
 }
 
-/// Runs [Command::Scan]
+/// Runs [Command::Scan] steps
 fn run_scan(parsed: Parsed) {
     if parsed.data.len() == 0 {
         help_exit("No files passed for scanning")
@@ -119,11 +124,25 @@ fn run_scan(parsed: Parsed) {
     }
 }
 
+/// Runs [Command::Parse] steps
+fn run_parse(parsed: Parsed) {
+    if parsed.data.len() == 0 {
+        help_exit("No files passed for parsing")
+    } else if parsed.data.len() > 1 {
+        help_exit("More then one file passed for parsing")
+    }
+
+    let _ = PathBuf::from(parsed.data[0].clone());
+
+    todo!("parsing");
+}
+
 fn main() {
     let parsed = Parsed::new();
 
     match parsed.command {
         Command::Scan => run_scan(parsed),
+        Command::Parse => run_parse(parsed),
         other => todo!("Finish ran '{:?}' command", other),
     }
 }
