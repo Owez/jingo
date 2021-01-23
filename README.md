@@ -15,12 +15,12 @@ class SomeClass;
 
 --- Creates new [SomeClass] from `x` value
 fun SomeClass::new(x) {
-  this.x = x; -- make it an x, this is a comment!
+  this.x = x;
 }
 
 --- Multiplies number on record with `y`
 fun SomeClass.multiply(y) {
-  return this.x;
+  return this.x * y;
 }
 
 var my_class = SomeClass::new(3);
