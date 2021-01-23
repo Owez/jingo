@@ -5,6 +5,28 @@
 
 A lightweight, high-level language designed for rapid prototyping
 
+## Syntax example
+
+A small class-based program demonstrating the basic syntax of this language:
+
+```none
+--- Small test class, helping to describe some features of Jingo
+class SomeClass;
+
+--- Creates new [SomeClass] from `x` value
+fun SomeClass::new(x) {
+  this.x = x; -- make it an x, this is a comment!
+}
+
+--- Multiplies number on record with `y`
+fun SomeClass.multiply(y) {
+  return this.x;
+}
+
+my_class = SomeClass::new(3);
+my_class.multiply(2); -- will be 3 * 2 = 6
+```
+
 ## Installation
 
 1. Clone this repository
