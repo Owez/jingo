@@ -23,7 +23,7 @@ fun SomeClass.multiply(y) {
   return this.x;
 }
 
-my_class = SomeClass::new(3);
+var my_class = SomeClass::new(3);
 my_class.multiply(2); -- will be 3 * 2 = 6
 ```
 
