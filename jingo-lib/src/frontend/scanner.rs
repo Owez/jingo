@@ -10,7 +10,7 @@ use std::{fmt, iter::Peekable};
 /// trait impl for documentation on each case
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScanError {
-    TokenInnerNotFound(String),
+    TokenKindNotFound(String),
     UnexpectedEof,
     EmptyCharLiteral,
     InvalidCharEscape(char),
@@ -24,7 +24,7 @@ pub enum ScanError {
 impl fmt::Display for ScanError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ScanError::TokenInnerNotFound(input) => {
+            ScanError::TokenKindNotFound(input) => {
                 write!(f, "Input '{}' is not a known keyword or identifier", input)
             }
             ScanError::UnexpectedEof => {
@@ -44,7 +44,7 @@ impl fmt::Display for ScanError {
 /// Type enumeration of a token, defining the possible types for a token, along
 /// with any data (such as in string literals) the token may use
 #[derive(Debug, Clone, PartialEq)]
-pub enum TokenInner {
+pub enum TokenKind {
     // single-char
     ParenLeft,
     ParenRight,
@@ -104,37 +104,37 @@ pub enum TokenInner {
     Eof,
 }
 
-impl TokenInner {
+impl TokenKind {
     /// Matches `input` to keywords and returns if one is matched
     pub fn new_keyword(input: impl AsRef<str>) -> Option<Self> {
         match input.as_ref() {
-            "if" => Some(TokenInner::If),
-            "and" => Some(TokenInner::And),
-            "or" => Some(TokenInner::Or),
-            "else" => Some(TokenInner::Else),
-            "true" => Some(TokenInner::True),
-            "false" => Some(TokenInner::False),
-            "none" => Some(TokenInner::None),
-            "class" => Some(TokenInner::Class),
-            "for" => Some(TokenInner::For),
-            "while" => Some(TokenInner::While),
-            "return" => Some(TokenInner::Return),
-            "self" => Some(TokenInner::This),
-            "var" => Some(TokenInner::Var),
-            "fun" => Some(TokenInner::Fun),
+            "if" => Some(TokenKind::If),
+            "and" => Some(TokenKind::And),
+            "or" => Some(TokenKind::Or),
+            "else" => Some(TokenKind::Else),
+            "true" => Some(TokenKind::True),
+            "false" => Some(TokenKind::False),
+            "none" => Some(TokenKind::None),
+            "class" => Some(TokenKind::Class),
+            "for" => Some(TokenKind::For),
+            "while" => Some(TokenKind::While),
+            "return" => Some(TokenKind::Return),
+            "self" => Some(TokenKind::This),
+            "var" => Some(TokenKind::Var),
+            "fun" => Some(TokenKind::Fun),
             _ => None,
         }
     }
 }
 
-/// Represents a token with a token type + data (i.e. [TokenInner]) along with
+/// Represents a token with a token type + data (i.e. [TokenKind]) along with
 /// positional data (i.e. [MetaPos]) where the token starts
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     /// Type + data of this token
-    pub inner: TokenInner,
+    pub inner: TokenKind,
 
-    /// Positional data for where this token occurs
+    /// Positional data
     pub pos: MetaPos,
 }
 
@@ -152,59 +152,59 @@ impl Token {
                 Some(c) => match c {
                     '(' => {
                         pos.col += 1;
-                        Ok(TokenInner::ParenLeft)
+                        Ok(TokenKind::ParenLeft)
                     }
                     ')' => {
                         pos.col += 1;
-                        Ok(TokenInner::ParenRight)
+                        Ok(TokenKind::ParenRight)
                     }
                     '{' => {
                         pos.col += 1;
-                        Ok(TokenInner::BraceLeft)
+                        Ok(TokenKind::BraceLeft)
                     }
                     '}' => {
                         pos.col += 1;
-                        Ok(TokenInner::BraceRight)
+                        Ok(TokenKind::BraceRight)
                     }
                     ',' => {
                         pos.col += 1;
-                        Ok(TokenInner::Comma)
+                        Ok(TokenKind::Comma)
                     }
                     '.' => {
                         pos.col += 1;
-                        Ok(TokenInner::Dot)
+                        Ok(TokenKind::Dot)
                     }
                     ':' => match input.next().ok_or(ScanError::UnexpectedEof)? {
                         ':' => {
                             pos.col += 2;
-                            Ok(TokenInner::Static)
+                            Ok(TokenKind::Static)
                         }
                         _ => Err(ScanError::UnknownToken(':')),
                     },
                     ';' => {
                         pos.col += 1;
-                        Ok(TokenInner::Semicolon)
+                        Ok(TokenKind::Semicolon)
                     }
                     '/' => {
                         pos.col += 1;
-                        Ok(TokenInner::FwdSlash)
+                        Ok(TokenKind::FwdSlash)
                     }
                     '*' => {
                         pos.col += 1;
-                        Ok(TokenInner::Star)
+                        Ok(TokenKind::Star)
                     }
                     '\n' => {
                         pos.newline(1);
-                        Ok(TokenInner::Newline)
+                        Ok(TokenKind::Newline)
                     }
                     ' ' | '\t' => {
                         pos.col += 1;
-                        Ok(TokenInner::Whitespace)
+                        Ok(TokenKind::Whitespace)
                     }
-                    '\r' => Ok(TokenInner::Whitespace), // special because windows
+                    '\r' => Ok(TokenKind::Whitespace), // special because windows
                     '+' => {
                         pos.col += 1;
-                        Ok(TokenInner::Plus)
+                        Ok(TokenKind::Plus)
                     }
                     '-' => get_dash_content(pos, input),
                     '=' => match input.peek() {
@@ -212,11 +212,11 @@ impl Token {
                             pos.col += 2;
                             input.next();
 
-                            Ok(TokenInner::EqualsEquals)
+                            Ok(TokenKind::EqualsEquals)
                         }
                         _ => {
                             pos.col += 1;
-                            Ok(TokenInner::Equals)
+                            Ok(TokenKind::Equals)
                         }
                     },
                     '!' => match input.peek() {
@@ -224,11 +224,11 @@ impl Token {
                             pos.col += 2;
                             input.next();
 
-                            Ok(TokenInner::ExclaimEquals)
+                            Ok(TokenKind::ExclaimEquals)
                         }
                         _ => {
                             pos.col += 1;
-                            Ok(TokenInner::Exclaim)
+                            Ok(TokenKind::Exclaim)
                         }
                     },
                     '<' => match input.peek() {
@@ -236,11 +236,11 @@ impl Token {
                             pos.col += 2;
                             input.next();
 
-                            Ok(TokenInner::LessEquals)
+                            Ok(TokenKind::LessEquals)
                         }
                         _ => {
                             pos.col += 1;
-                            Ok(TokenInner::Less)
+                            Ok(TokenKind::Less)
                         }
                     },
                     '>' => match input.peek() {
@@ -248,20 +248,20 @@ impl Token {
                             input.next();
                             pos.col += 2;
 
-                            Ok(TokenInner::GreaterEquals)
+                            Ok(TokenKind::GreaterEquals)
                         }
                         _ => {
                             pos.col += 1;
-                            Ok(TokenInner::Greater)
+                            Ok(TokenKind::Greater)
                         }
                     },
-                    '"' => Ok(TokenInner::Str(get_str_content(pos, input)?)),
+                    '"' => Ok(TokenKind::Str(get_str_content(pos, input)?)),
                     '\'' => match input.next().ok_or(ScanError::UnexpectedEof)? {
                         '\'' => Err(ScanError::EmptyCharLiteral),
                         c => match input.next().ok_or(ScanError::UnexpectedEof)? {
                             '\'' => {
                                 pos.col += 3;
-                                Ok(TokenInner::Char(c))
+                                Ok(TokenKind::Char(c))
                             }
                             err_c => Err(ScanError::InvalidCharEscape(err_c)),
                         },
@@ -270,20 +270,20 @@ impl Token {
                     'a'..='z' | 'A'..='Z' | '_' => {
                         let id = get_id_content(pos, input, got_next.unwrap())?;
 
-                        match TokenInner::new_keyword(&id) {
+                        match TokenKind::new_keyword(&id) {
                             Some(token_inner) => Ok(token_inner),
-                            None => Ok(TokenInner::Id(id)),
+                            None => Ok(TokenKind::Id(id)),
                         }
                     }
                     unknown => Err(ScanError::UnknownToken(unknown)),
                 },
-                None => Ok(TokenInner::Eof),
+                None => Ok(TokenKind::Eof),
             }?,
         })
     }
 }
 
-impl From<Token> for TokenInner {
+impl From<Token> for TokenKind {
     fn from(token: Token) -> Self {
         token.inner
     }
@@ -295,7 +295,7 @@ impl From<Token> for MetaPos {
     }
 }
 
-/// Scans a raw char input for a valid [TokenInner::Comment] or [TokenInner::DocStr]
+/// Scans a raw char input for a valid [TokenKind::Comment] or [TokenKind::DocStr]
 fn get_comment_content(
     pos: &mut MetaPos,
     input: &mut Peekable<impl Iterator<Item = char>>,
@@ -317,11 +317,11 @@ fn get_comment_content(
     Ok(output.trim().to_string())
 }
 
-/// Scans a raw char input for a valid [TokenInner::Comment] or [TokenInner::DocStr]
+/// Scans a raw char input for a valid [TokenKind::Comment] or [TokenKind::DocStr]
 fn get_dash_content(
     pos: &mut MetaPos,
     input: &mut Peekable<impl Iterator<Item = char>>,
-) -> Result<TokenInner, ScanError> {
+) -> Result<TokenKind, ScanError> {
     let peeked = input.peek();
 
     match peeked {
@@ -331,19 +331,19 @@ fn get_dash_content(
             match input.peek() {
                 Some('-') => {
                     input.next();
-                    Ok(TokenInner::DocStr(get_comment_content(pos, input)?))
+                    Ok(TokenKind::DocStr(get_comment_content(pos, input)?))
                 }
-                _ => Ok(TokenInner::Comment(get_comment_content(pos, input)?)),
+                _ => Ok(TokenKind::Comment(get_comment_content(pos, input)?)),
             }
         }
         _ => {
             pos.col += 1;
-            Ok(TokenInner::Minus)
+            Ok(TokenKind::Minus)
         }
     }
 }
 
-/// Scans a raw char input for a valid [TokenInner::Str]
+/// Scans a raw char input for a valid [TokenKind::Str]
 fn get_str_content(
     pos: &mut MetaPos,
     input: &mut Peekable<impl Iterator<Item = char>>,
@@ -390,12 +390,12 @@ fn get_str_content(
     Ok(output)
 }
 
-/// Scans a raw char input for a valid [TokenInner::Int] or [TokenInner::Float]
+/// Scans a raw char input for a valid [TokenKind::Int] or [TokenKind::Float]
 fn get_num_content(
     pos: &mut MetaPos,
     input: &mut Peekable<impl Iterator<Item = char>>,
     start: char,
-) -> Result<TokenInner, ScanError> {
+) -> Result<TokenKind, ScanError> {
     let mut numstr = String::from(start);
     let mut is_float = false;
 
@@ -424,13 +424,13 @@ fn get_num_content(
     pos.col += numstr.len();
 
     Ok(if is_float {
-        TokenInner::Float(
+        TokenKind::Float(
             numstr
                 .parse::<f64>()
                 .map_err(|err| ScanError::InvalidFloat(err))?,
         )
     } else {
-        TokenInner::Int(
+        TokenKind::Int(
             numstr
                 .parse::<i64>()
                 .map_err(|err| ScanError::InvalidInt(err))?,
@@ -438,7 +438,7 @@ fn get_num_content(
     })
 }
 
-/// Scans a raw char input for a valid string to be used for a [TokenInner::Id]
+/// Scans a raw char input for a valid string to be used for a [TokenKind::Id]
 /// or keyword matching downstream. This may return [ScanError::InvalidId] for
 /// badly formatted identifiers so this should be used as the last match
 fn get_id_content(
@@ -472,7 +472,7 @@ pub fn launch(mut meta: Meta, input: impl AsRef<str>) -> Result<Vec<Token>, (Sca
     loop {
         match Token::new(&mut meta.pos, &mut input) {
             Ok(token) => match token.inner {
-                TokenInner::Eof => break,
+                TokenKind::Eof => break,
                 _ => output.push(token),
             },
             Err(err) => return Err((err, meta)),
@@ -492,7 +492,7 @@ mod tests {
             Token::new(&mut MetaPos::new(), &mut "==".chars().peekable())
                 .unwrap()
                 .inner,
-            TokenInner::EqualsEquals
+            TokenKind::EqualsEquals
         )
     }
 
@@ -502,7 +502,7 @@ mod tests {
             Token::new(&mut MetaPos::new(), &mut "!=".chars().peekable())
                 .unwrap()
                 .inner,
-            TokenInner::ExclaimEquals
+            TokenKind::ExclaimEquals
         )
     }
 
@@ -512,7 +512,7 @@ mod tests {
             Token::new(&mut MetaPos::new(), &mut "<=".chars().peekable())
                 .unwrap()
                 .inner,
-            TokenInner::LessEquals
+            TokenKind::LessEquals
         )
     }
 
@@ -522,7 +522,7 @@ mod tests {
             Token::new(&mut MetaPos::new(), &mut ">=".chars().peekable())
                 .unwrap()
                 .inner,
-            TokenInner::GreaterEquals
+            TokenKind::GreaterEquals
         )
     }
 
@@ -530,12 +530,12 @@ mod tests {
     fn scan_basic() {
         let tokens = launch(Meta::new(None), "=!==!=!!=").unwrap();
         let exp = vec![
-            TokenInner::Equals,
-            TokenInner::ExclaimEquals,
-            TokenInner::Equals,
-            TokenInner::ExclaimEquals,
-            TokenInner::Exclaim,
-            TokenInner::ExclaimEquals,
+            TokenKind::Equals,
+            TokenKind::ExclaimEquals,
+            TokenKind::Equals,
+            TokenKind::ExclaimEquals,
+            TokenKind::Exclaim,
+            TokenKind::ExclaimEquals,
         ];
 
         for (ind, token) in tokens.iter().enumerate() {
@@ -548,11 +548,11 @@ mod tests {
         let tokens = launch(Meta::new(None), "'h''i'").unwrap();
         let exp = vec![
             Token {
-                inner: TokenInner::Char('h'),
+                inner: TokenKind::Char('h'),
                 pos: MetaPos { line: 1, col: 1 },
             },
             Token {
-                inner: TokenInner::Char('i'),
+                inner: TokenKind::Char('i'),
                 pos: MetaPos { line: 1, col: 4 },
             },
         ];
@@ -605,14 +605,14 @@ mod tests {
         assert_eq!(
             launch(Meta::new(None), r#""Hello there!""#).unwrap()[0],
             Token {
-                inner: TokenInner::Str(r#"Hello there!"#.to_string()),
+                inner: TokenKind::Str(r#"Hello there!"#.to_string()),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), r#""Hello th\\ere!""#).unwrap()[0],
             Token {
-                inner: TokenInner::Str(r#"Hello th\ere!"#.to_string()),
+                inner: TokenKind::Str(r#"Hello th\ere!"#.to_string()),
                 pos: MetaPos { line: 1, col: 1 }
             }
         )
@@ -623,14 +623,14 @@ mod tests {
         assert_eq!(
             launch(Meta::new(None), "45635463465").unwrap()[0],
             Token {
-                inner: TokenInner::Int(45635463465),
+                inner: TokenKind::Int(45635463465),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), "0").unwrap()[0],
             Token {
-                inner: TokenInner::Int(0),
+                inner: TokenKind::Int(0),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
@@ -642,23 +642,23 @@ mod tests {
             launch(Meta::new(None), "78956456+87685446+324345345").unwrap(),
             vec![
                 Token {
-                    inner: TokenInner::Int(78956456),
+                    inner: TokenKind::Int(78956456),
                     pos: MetaPos { line: 1, col: 1 }
                 },
                 Token {
-                    inner: TokenInner::Plus,
+                    inner: TokenKind::Plus,
                     pos: MetaPos { line: 1, col: 9 }
                 },
                 Token {
-                    inner: TokenInner::Int(87685446),
+                    inner: TokenKind::Int(87685446),
                     pos: MetaPos { line: 1, col: 10 }
                 },
                 Token {
-                    inner: TokenInner::Plus,
+                    inner: TokenKind::Plus,
                     pos: MetaPos { line: 1, col: 18 }
                 },
                 Token {
-                    inner: TokenInner::Int(324345345),
+                    inner: TokenKind::Int(324345345),
                     pos: MetaPos { line: 1, col: 19 }
                 },
             ]
@@ -670,14 +670,14 @@ mod tests {
         assert_eq!(
             launch(Meta::new(None), "45.34234").unwrap()[0],
             Token {
-                inner: TokenInner::Float(45.34234),
+                inner: TokenKind::Float(45.34234),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), "0.0").unwrap()[0],
             Token {
-                inner: TokenInner::Float(0.0),
+                inner: TokenKind::Float(0.0),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
@@ -689,15 +689,15 @@ mod tests {
             launch(Meta::new(None), "453495.344294394+342342").unwrap(),
             vec![
                 Token {
-                    inner: TokenInner::Float(453495.344294394),
+                    inner: TokenKind::Float(453495.344294394),
                     pos: MetaPos { line: 1, col: 1 }
                 },
                 Token {
-                    inner: TokenInner::Plus,
+                    inner: TokenKind::Plus,
                     pos: MetaPos { line: 1, col: 17 }
                 },
                 Token {
-                    inner: TokenInner::Int(342342),
+                    inner: TokenKind::Int(342342),
                     pos: MetaPos { line: 1, col: 18 }
                 },
             ]
@@ -706,23 +706,23 @@ mod tests {
             launch(Meta::new(None), "4534342+3435345.3453-32324").unwrap(),
             vec![
                 Token {
-                    inner: TokenInner::Int(4534342),
+                    inner: TokenKind::Int(4534342),
                     pos: MetaPos { line: 1, col: 1 }
                 },
                 Token {
-                    inner: TokenInner::Plus,
+                    inner: TokenKind::Plus,
                     pos: MetaPos { line: 1, col: 8 }
                 },
                 Token {
-                    inner: TokenInner::Float(3435345.3453),
+                    inner: TokenKind::Float(3435345.3453),
                     pos: MetaPos { line: 1, col: 9 }
                 },
                 Token {
-                    inner: TokenInner::Minus,
+                    inner: TokenKind::Minus,
                     pos: MetaPos { line: 1, col: 21 }
                 },
                 Token {
-                    inner: TokenInner::Int(32324),
+                    inner: TokenKind::Int(32324),
                     pos: MetaPos { line: 1, col: 22 }
                 },
             ]
@@ -739,35 +739,35 @@ mod tests {
             .unwrap(),
             vec![
                 Token {
-                    inner: TokenInner::Comment("comment".to_string()),
+                    inner: TokenKind::Comment("comment".to_string()),
                     pos: MetaPos { line: 1, col: 1 }
                 },
                 Token {
-                    inner: TokenInner::DocStr("docstr".to_string()),
+                    inner: TokenKind::DocStr("docstr".to_string()),
                     pos: MetaPos { line: 2, col: 1 }
                 },
                 Token {
-                    inner: TokenInner::Plus,
+                    inner: TokenKind::Plus,
                     pos: MetaPos { line: 3, col: 1 }
                 },
                 Token {
-                    inner: TokenInner::DocStr("docstr".to_string()),
+                    inner: TokenKind::DocStr("docstr".to_string()),
                     pos: MetaPos { line: 3, col: 2 }
                 },
                 Token {
-                    inner: TokenInner::DocStr("-docstr".to_string()),
+                    inner: TokenKind::DocStr("-docstr".to_string()),
                     pos: MetaPos { line: 4, col: 1 }
                 },
                 Token {
-                    inner: TokenInner::Minus,
+                    inner: TokenKind::Minus,
                     pos: MetaPos { line: 5, col: 1 }
                 },
                 Token {
-                    inner: TokenInner::Whitespace,
+                    inner: TokenKind::Whitespace,
                     pos: MetaPos { line: 5, col: 2 }
                 },
                 Token {
-                    inner: TokenInner::Comment("comment".to_string()),
+                    inner: TokenKind::Comment("comment".to_string()),
                     pos: MetaPos { line: 5, col: 3 }
                 },
             ]
@@ -779,7 +779,7 @@ mod tests {
         assert_eq!(
             launch(Meta::new(None), "::").unwrap()[0],
             Token {
-                inner: TokenInner::Static,
+                inner: TokenKind::Static,
                 pos: MetaPos::new()
             }
         );

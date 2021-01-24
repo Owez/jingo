@@ -1,13 +1,13 @@
-//! ExpressionInner-centric abstract syntax tree for Jingo
+//! Expression-centric abstract syntax tree for Jingo
 
 use crate::meta::MetaPos;
 
 use std::fmt;
 
-/// ExpressionInner enumeration for the AST, containing all possible varients for
+/// Expression kind enumeration for the AST, containing all possible varients for
 /// the AST to use
 ///
-/// You may be wanting to see [Expression], which is this main enumeration, combined
+/// You may be wanting to see [Expr], which is this main enumeration, combined
 /// with the [MetaPos] structure to give context to the positioning of the node
 /// in question
 ///
@@ -19,116 +19,148 @@ use std::fmt;
 ///
 /// Instances which do not have any user-given documentation (or dont allow entry
 /// of such) will simply provide an empty string.
-///
-/// # Varient documentation
-///
-/// Any varients included in this enumeration which are not documentation mean
-/// that documentation is provided in the item they are referencing. Take
-/// [ExpressionInner::Class] --> [Class] as an example of this.
-pub enum ExpressionInner {
-    /// Binary operation allowing two [ExpressionInner]s to be modified by a mathmatical
-    /// notation defined in [BinOp]
-    BinOp((Box<ExpressionInner>, BinOp, Box<ExpressionInner>)),
+pub enum Expr {
+    BinOp(BinOp),
     Class(Class),
     Function(Function),
     Method(Method),
 }
 
-impl fmt::Display for ExpressionInner {
+impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ExpressionInner::BinOp(_) => write!(f, ""),
-            ExpressionInner::Class(class) => write!(f, "{}", class.doc),
-            ExpressionInner::Function(function) => write!(f, "{}", function.doc),
-            ExpressionInner::Method(method) => write!(f, "{}", method.doc),
+            Expr::BinOp(_) => write!(f, ""),
+            Expr::Class(class) => write!(f, "{}", class),
+            Expr::Function(function) => write!(f, "{}", function),
+            Expr::Method(method) => write!(f, "{}", method),
         }
     }
 }
 
-/// The most abstract definition for the AST, a fully-encompassed expression which
-/// wraps [ExpressionInner] and [MetaPos] to give context
-///
-/// To get documentation infomation on this expression, you may use both the
-/// [fmt::Display] on [Expression::inner] for the user-generated documentation or
-/// get the positional data using the same trait implementation with [Expression::pos]
-pub struct Expression {
-    /// Type + data of this expression
-    pub inner: ExpressionInner,
-
-    /// Positional data for where this expression occurs
-    pub pos: MetaPos,
-}
-
-impl From<Expression> for ExpressionInner {
-    fn from(expr: Expression) -> Self {
-        expr.inner
-    }
-}
-
-impl From<Expression> for MetaPos {
-    fn from(expr: Expression) -> Self {
-        expr.pos
-    }
-}
-
-/// Binary operation enumeration, defining allowed types of an [ExpressionInner::BinOp]
-pub enum BinOp {
+/// Binary operation varients, defining allowed types of a [BinOp] expression
+pub enum BinOpKind {
     Add,
     Sub,
     Mul,
     Div,
 }
 
+/// Binary operation allowing two [Expr]s to be modified by a mathmatical notation
+pub struct BinOp {
+    /// Leftmost expression
+    pub left: Box<Expr>,
+
+    /// Rightmost expression
+    pub right: Box<Expr>,
+
+    /// Mathmatical notation to modifiy [BinOp::left] and [BinOp::right] together by
+    pub kind: BinOpKind,
+
+    /// Positional data for [BinOp::kind], should typically be 1 behind [BinOp::right]
+    pub kind_pos: MetaPos,
+}
+
 /// Documentation string, commonly refered to as a "docstring", used to document
-/// [ExpressionInner] varients for documentation generation
-pub struct Doc(Option<String>);
+/// [Expr] variants for documentation generation
+pub struct Doc {
+    /// Actual documentation infomation added by programmer
+    pub inner: String,
+
+    /// Positional data
+    pub pos: MetaPos,
+}
 
 impl fmt::Display for Doc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.0 {
+        write!(f, "{}", self.inner)
+    }
+}
+
+/// Pre-validated valid identifier
+pub struct Id {
+    /// Actual identifier name/data programmer passed
+    pub inner: String,
+
+    /// Positional data
+    pub pos: MetaPos,
+}
+
+/// Class definition
+pub struct Class {
+    /// Class documentation
+    pub doc: Option<Doc>,
+
+    /// Name of class
+    pub name: Id,
+
+    /// Start position of this class
+    pub pos: MetaPos,
+}
+
+impl fmt::Display for Class {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.doc {
             Some(doc) => write!(f, "{}", doc),
             None => write!(f, ""),
         }
     }
 }
 
-/// Class definition
-pub struct Class {
-    /// Class documentation
-    pub doc: Doc,
-}
-
-/// Subprogram allowing code modularity, recurses down into more [Expression]
+/// Subprogram allowing code modularity, recurses down into more [Expr]
 /// nodes. This is different from the [Method] structure as this one is for
 /// non-class-linked subprograms
 pub struct Function {
     /// Function documentation
-    pub doc: Doc,
+    pub doc: Option<Doc>,
 
     /// Allowed arguments to be passed
     pub args: Vec<String>,
 
     /// Body of function
-    pub body: Vec<Expression>,
+    pub body: Vec<Expr>,
+
+    /// Start position of this function
+    pub pos: MetaPos,
+}
+
+impl fmt::Display for Function {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.doc {
+            Some(doc) => write!(f, "{}", doc),
+            None => write!(f, ""),
+        }
+    }
 }
 
 /// Class-linked subprogram similar to the base [Function], but is strictly linked
 /// to a certain class
 pub struct Method {
     /// Method documentation
-    pub doc: Doc,
+    pub doc: Option<Doc>,
 
     /// Allowed arguments to be passed
-    pub args: Vec<String>,
+    pub args: Vec<Id>,
 
     /// Body of method
-    pub body: Vec<Expression>,
+    pub body: Vec<Expr>,
 
     /// Reference to the class name (which should be an existing [Class]) this
     /// method is linked to
-    pub class_name: String,
+    pub class_name: Id,
 
     /// Distinguishes between a creation method (defined with `::`) or a normal
     /// method (defined with `.`)
     pub creation_method: bool,
+
+    /// Start position of this method
+    pub pos: MetaPos,
+}
+
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.doc {
+            Some(doc) => write!(f, "{}", doc),
+            None => write!(f, ""),
+        }
+    }
 }
