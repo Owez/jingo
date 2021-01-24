@@ -1,9 +1,15 @@
-//! Expression-centric abstract syntax tree for Jingo
+//! ExpressionInner-centric abstract syntax tree for Jingo
+
+use crate::meta::MetaPos;
 
 use std::fmt;
 
-/// Expression enumeration for the AST, the most abstract node type all other
-/// AST items conform to, as everything is considered an expression
+/// ExpressionInner enumeration for the AST, containing all possible varients for
+/// the AST to use
+///
+/// You may be wanting to see [Expression], which is this main enumeration, combined
+/// with the [MetaPos] structure to give context to the positioning of the node
+/// in question
 ///
 /// # Documentation generation
 ///
@@ -18,28 +24,54 @@ use std::fmt;
 ///
 /// Any varients included in this enumeration which are not documentation mean
 /// that documentation is provided in the item they are referencing. Take
-/// [Expression::Class] --> [Class] as an example of this.
-pub enum Expression {
-    /// Binary operation allowing two [Expression]s to be modified by a mathmatical
+/// [ExpressionInner::Class] --> [Class] as an example of this.
+pub enum ExpressionInner {
+    /// Binary operation allowing two [ExpressionInner]s to be modified by a mathmatical
     /// notation defined in [BinOp]
-    BinOp((Box<Expression>, BinOp, Box<Expression>)),
+    BinOp((Box<ExpressionInner>, BinOp, Box<ExpressionInner>)),
     Class(Class),
     Function(Function),
     Method(Method),
 }
 
-impl fmt::Display for Expression {
+impl fmt::Display for ExpressionInner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Expression::BinOp(_) => write!(f, ""),
-            Expression::Class(class) => write!(f, "{}", class.doc),
-            Expression::Function(function) => write!(f, "{}", function.doc),
-            Expression::Method(method) => write!(f, "{}", method.doc),
+            ExpressionInner::BinOp(_) => write!(f, ""),
+            ExpressionInner::Class(class) => write!(f, "{}", class.doc),
+            ExpressionInner::Function(function) => write!(f, "{}", function.doc),
+            ExpressionInner::Method(method) => write!(f, "{}", method.doc),
         }
     }
 }
 
-/// Binary operation enumeration, defining allowed types of an [Expression::BinOp]
+/// The most abstract definition for the AST, a fully-encompassed expression which
+/// wraps [ExpressionInner] and [MetaPos] to give context
+///
+/// To get documentation infomation on this expression, you may use both the
+/// [fmt::Display] on [Expression::inner] for the user-generated documentation or
+/// get the positional data using the same trait implementation with [Expression::pos]
+pub struct Expression {
+    /// Type + data of this expression
+    pub inner: ExpressionInner,
+
+    /// Positional data for where this expression occurs
+    pub pos: MetaPos,
+}
+
+impl From<Expression> for ExpressionInner {
+    fn from(expr: Expression) -> Self {
+        expr.inner
+    }
+}
+
+impl From<Expression> for MetaPos {
+    fn from(expr: Expression) -> Self {
+        expr.pos
+    }
+}
+
+/// Binary operation enumeration, defining allowed types of an [ExpressionInner::BinOp]
 pub enum BinOp {
     Add,
     Sub,
@@ -48,7 +80,7 @@ pub enum BinOp {
 }
 
 /// Documentation string, commonly refered to as a "docstring", used to document
-/// [Expression] varients for documentation generation
+/// [ExpressionInner] varients for documentation generation
 pub struct Doc(Option<String>);
 
 impl fmt::Display for Doc {
@@ -80,7 +112,8 @@ pub struct Function {
     pub body: Vec<Expression>,
 }
 
-/// Class-linked subprogram similar to the base [Function], but is strictly linked to a certain class
+/// Class-linked subprogram similar to the base [Function], but is strictly linked
+/// to a certain class
 pub struct Method {
     /// Method documentation
     pub doc: Doc,
