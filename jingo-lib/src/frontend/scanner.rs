@@ -132,7 +132,7 @@ impl TokenKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     /// Type + data of this token
-    pub inner: TokenKind,
+    pub kind: TokenKind,
 
     /// Positional data
     pub pos: MetaPos,
@@ -148,7 +148,7 @@ impl Token {
 
         Ok(Self {
             pos: pos.clone(),
-            inner: match got_next {
+            kind: match got_next {
                 Some(c) => match c {
                     '(' => {
                         pos.col += 1;
@@ -271,7 +271,7 @@ impl Token {
                         let id = get_id_content(pos, input, got_next.unwrap())?;
 
                         match TokenKind::new_keyword(&id) {
-                            Some(token_inner) => Ok(token_inner),
+                            Some(token_kind) => Ok(token_kind),
                             None => Ok(TokenKind::Id(id)),
                         }
                     }
@@ -285,7 +285,7 @@ impl Token {
 
 impl From<Token> for TokenKind {
     fn from(token: Token) -> Self {
-        token.inner
+        token.kind
     }
 }
 
@@ -373,7 +373,7 @@ fn get_str_content(
                 if backslash_active {
                     match other {
                         't' | 'n' | 'r' => {
-                            output.push(other); // TODO: fix
+                            output.push(other);
                             backslash_active = false;
                         }
                         esc => return Err(ScanError::UnknownStrEscape(esc)),
@@ -471,7 +471,7 @@ pub fn launch(mut meta: Meta, input: impl AsRef<str>) -> Result<Vec<Token>, (Sca
 
     loop {
         match Token::new(&mut meta.pos, &mut input) {
-            Ok(token) => match token.inner {
+            Ok(token) => match token.kind {
                 TokenKind::Eof => break,
                 _ => output.push(token),
             },
@@ -491,7 +491,7 @@ mod tests {
         assert_eq!(
             Token::new(&mut MetaPos::new(), &mut "==".chars().peekable())
                 .unwrap()
-                .inner,
+                .kind,
             TokenKind::EqualsEquals
         )
     }
@@ -501,7 +501,7 @@ mod tests {
         assert_eq!(
             Token::new(&mut MetaPos::new(), &mut "!=".chars().peekable())
                 .unwrap()
-                .inner,
+                .kind,
             TokenKind::ExclaimEquals
         )
     }
@@ -511,7 +511,7 @@ mod tests {
         assert_eq!(
             Token::new(&mut MetaPos::new(), &mut "<=".chars().peekable())
                 .unwrap()
-                .inner,
+                .kind,
             TokenKind::LessEquals
         )
     }
@@ -521,7 +521,7 @@ mod tests {
         assert_eq!(
             Token::new(&mut MetaPos::new(), &mut ">=".chars().peekable())
                 .unwrap()
-                .inner,
+                .kind,
             TokenKind::GreaterEquals
         )
     }
@@ -539,7 +539,7 @@ mod tests {
         ];
 
         for (ind, token) in tokens.iter().enumerate() {
-            assert_eq!(token.inner, exp[ind]);
+            assert_eq!(token.kind, exp[ind]);
         }
     }
 
@@ -548,11 +548,11 @@ mod tests {
         let tokens = launch(Meta::new(None), "'h''i'").unwrap();
         let exp = vec![
             Token {
-                inner: TokenKind::Char('h'),
+                kind: TokenKind::Char('h'),
                 pos: MetaPos { line: 1, col: 1 },
             },
             Token {
-                inner: TokenKind::Char('i'),
+                kind: TokenKind::Char('i'),
                 pos: MetaPos { line: 1, col: 4 },
             },
         ];
@@ -605,14 +605,14 @@ mod tests {
         assert_eq!(
             launch(Meta::new(None), r#""Hello there!""#).unwrap()[0],
             Token {
-                inner: TokenKind::Str(r#"Hello there!"#.to_string()),
+                kind: TokenKind::Str(r#"Hello there!"#.to_string()),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), r#""Hello th\\ere!""#).unwrap()[0],
             Token {
-                inner: TokenKind::Str(r#"Hello th\ere!"#.to_string()),
+                kind: TokenKind::Str(r#"Hello th\ere!"#.to_string()),
                 pos: MetaPos { line: 1, col: 1 }
             }
         )
@@ -623,14 +623,14 @@ mod tests {
         assert_eq!(
             launch(Meta::new(None), "45635463465").unwrap()[0],
             Token {
-                inner: TokenKind::Int(45635463465),
+                kind: TokenKind::Int(45635463465),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), "0").unwrap()[0],
             Token {
-                inner: TokenKind::Int(0),
+                kind: TokenKind::Int(0),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
@@ -642,23 +642,23 @@ mod tests {
             launch(Meta::new(None), "78956456+87685446+324345345").unwrap(),
             vec![
                 Token {
-                    inner: TokenKind::Int(78956456),
+                    kind: TokenKind::Int(78956456),
                     pos: MetaPos { line: 1, col: 1 }
                 },
                 Token {
-                    inner: TokenKind::Plus,
+                    kind: TokenKind::Plus,
                     pos: MetaPos { line: 1, col: 9 }
                 },
                 Token {
-                    inner: TokenKind::Int(87685446),
+                    kind: TokenKind::Int(87685446),
                     pos: MetaPos { line: 1, col: 10 }
                 },
                 Token {
-                    inner: TokenKind::Plus,
+                    kind: TokenKind::Plus,
                     pos: MetaPos { line: 1, col: 18 }
                 },
                 Token {
-                    inner: TokenKind::Int(324345345),
+                    kind: TokenKind::Int(324345345),
                     pos: MetaPos { line: 1, col: 19 }
                 },
             ]
@@ -670,14 +670,14 @@ mod tests {
         assert_eq!(
             launch(Meta::new(None), "45.34234").unwrap()[0],
             Token {
-                inner: TokenKind::Float(45.34234),
+                kind: TokenKind::Float(45.34234),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
         assert_eq!(
             launch(Meta::new(None), "0.0").unwrap()[0],
             Token {
-                inner: TokenKind::Float(0.0),
+                kind: TokenKind::Float(0.0),
                 pos: MetaPos { line: 1, col: 1 }
             }
         );
@@ -689,15 +689,15 @@ mod tests {
             launch(Meta::new(None), "453495.344294394+342342").unwrap(),
             vec![
                 Token {
-                    inner: TokenKind::Float(453495.344294394),
+                    kind: TokenKind::Float(453495.344294394),
                     pos: MetaPos { line: 1, col: 1 }
                 },
                 Token {
-                    inner: TokenKind::Plus,
+                    kind: TokenKind::Plus,
                     pos: MetaPos { line: 1, col: 17 }
                 },
                 Token {
-                    inner: TokenKind::Int(342342),
+                    kind: TokenKind::Int(342342),
                     pos: MetaPos { line: 1, col: 18 }
                 },
             ]
@@ -706,23 +706,23 @@ mod tests {
             launch(Meta::new(None), "4534342+3435345.3453-32324").unwrap(),
             vec![
                 Token {
-                    inner: TokenKind::Int(4534342),
+                    kind: TokenKind::Int(4534342),
                     pos: MetaPos { line: 1, col: 1 }
                 },
                 Token {
-                    inner: TokenKind::Plus,
+                    kind: TokenKind::Plus,
                     pos: MetaPos { line: 1, col: 8 }
                 },
                 Token {
-                    inner: TokenKind::Float(3435345.3453),
+                    kind: TokenKind::Float(3435345.3453),
                     pos: MetaPos { line: 1, col: 9 }
                 },
                 Token {
-                    inner: TokenKind::Minus,
+                    kind: TokenKind::Minus,
                     pos: MetaPos { line: 1, col: 21 }
                 },
                 Token {
-                    inner: TokenKind::Int(32324),
+                    kind: TokenKind::Int(32324),
                     pos: MetaPos { line: 1, col: 22 }
                 },
             ]
@@ -739,35 +739,35 @@ mod tests {
             .unwrap(),
             vec![
                 Token {
-                    inner: TokenKind::Comment("comment".to_string()),
+                    kind: TokenKind::Comment("comment".to_string()),
                     pos: MetaPos { line: 1, col: 1 }
                 },
                 Token {
-                    inner: TokenKind::DocStr("docstr".to_string()),
+                    kind: TokenKind::DocStr("docstr".to_string()),
                     pos: MetaPos { line: 2, col: 1 }
                 },
                 Token {
-                    inner: TokenKind::Plus,
+                    kind: TokenKind::Plus,
                     pos: MetaPos { line: 3, col: 1 }
                 },
                 Token {
-                    inner: TokenKind::DocStr("docstr".to_string()),
+                    kind: TokenKind::DocStr("docstr".to_string()),
                     pos: MetaPos { line: 3, col: 2 }
                 },
                 Token {
-                    inner: TokenKind::DocStr("-docstr".to_string()),
+                    kind: TokenKind::DocStr("-docstr".to_string()),
                     pos: MetaPos { line: 4, col: 1 }
                 },
                 Token {
-                    inner: TokenKind::Minus,
+                    kind: TokenKind::Minus,
                     pos: MetaPos { line: 5, col: 1 }
                 },
                 Token {
-                    inner: TokenKind::Whitespace,
+                    kind: TokenKind::Whitespace,
                     pos: MetaPos { line: 5, col: 2 }
                 },
                 Token {
-                    inner: TokenKind::Comment("comment".to_string()),
+                    kind: TokenKind::Comment("comment".to_string()),
                     pos: MetaPos { line: 5, col: 3 }
                 },
             ]
@@ -779,7 +779,7 @@ mod tests {
         assert_eq!(
             launch(Meta::new(None), "::").unwrap()[0],
             Token {
-                inner: TokenKind::Static,
+                kind: TokenKind::Static,
                 pos: MetaPos::new()
             }
         );
@@ -793,6 +793,101 @@ mod tests {
         );
     }
 
-    // TODO: keyword test
-    // TODO: identifier test
+    #[test]
+    fn kw_check() {
+        assert_eq!(
+            launch(Meta::new(None), "var fun if and or else while for").unwrap(),
+            vec![
+                Token {
+                    kind: TokenKind::Var,
+                    pos: MetaPos { line: 1, col: 1 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 4 }
+                },
+                Token {
+                    kind: TokenKind::Fun,
+                    pos: MetaPos { line: 1, col: 5 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 8 }
+                },
+                Token {
+                    kind: TokenKind::If,
+                    pos: MetaPos { line: 1, col: 9 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 11 }
+                },
+                Token {
+                    kind: TokenKind::And,
+                    pos: MetaPos { line: 1, col: 12 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 15 }
+                },
+                Token {
+                    kind: TokenKind::Or,
+                    pos: MetaPos { line: 1, col: 16 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 18 }
+                },
+                Token {
+                    kind: TokenKind::Else,
+                    pos: MetaPos { line: 1, col: 19 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 23 }
+                },
+                Token {
+                    kind: TokenKind::While,
+                    pos: MetaPos { line: 1, col: 24 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 29 }
+                },
+                Token {
+                    kind: TokenKind::For,
+                    pos: MetaPos { line: 1, col: 30 }
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn id_check() {
+        assert_eq!(
+            launch(Meta::new(None), "fj_h5464g fw fwef__w_e").unwrap(),
+            vec![
+                Token {
+                    kind: TokenKind::Id("fj_h5464g".to_string()),
+                    pos: MetaPos { line: 1, col: 1 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 10 }
+                },
+                Token {
+                    kind: TokenKind::Id("fw".to_string()),
+                    pos: MetaPos { line: 1, col: 11 }
+                },
+                Token {
+                    kind: TokenKind::Whitespace,
+                    pos: MetaPos { line: 1, col: 13 }
+                },
+                Token {
+                    kind: TokenKind::Id("fwef__w_e".to_string()),
+                    pos: MetaPos { line: 1, col: 14 }
+                }
+            ]
+        )
+    }
 }
