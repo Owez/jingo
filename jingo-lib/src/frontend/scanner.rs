@@ -194,7 +194,7 @@ impl Token {
                         Ok(TokenKind::Star)
                     }
                     '\n' => {
-                        pos.newline(1);
+                        pos.newline();
                         Ok(TokenKind::Newline)
                     }
                     ' ' | '\t' => {
@@ -306,7 +306,7 @@ fn get_comment_content(
     loop {
         match input.next() {
             Some('\n') => {
-                pos.newline(1);
+                pos.newline();
                 break;
             }
             Some(other) => output.push(other),

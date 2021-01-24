@@ -24,8 +24,8 @@ impl MetaPos {
     }
 
     /// Resets for newline
-    pub fn newline(&mut self, times: usize) {
-        self.line += times;
+    pub fn newline(&mut self) {
+        self.line += 1;
         self.col = 1;
     }
 }
@@ -86,8 +86,8 @@ impl Meta {
     }
 
     /// Resets [Meta::pos] for newline
-    pub fn newline(&mut self, times: usize) {
-        self.pos.newline(times)
+    pub fn newline(&mut self) {
+        self.pos.newline()
     }
 }
 
