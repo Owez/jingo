@@ -1,8 +1,6 @@
 //! Expression-centric abstract syntax tree for Jingo
 
-use crate::meta::MetaPos;
-
-use std::fmt;
+use std::{fmt, ops::Range};
 
 /// Expression kind enumeration for the AST, containing all possible varients for
 /// the AST to use
@@ -55,9 +53,6 @@ pub struct BinOp {
 
     /// Mathmatical notation to modifiy [BinOp::left] and [BinOp::right] together by
     pub kind: BinOpKind,
-
-    /// Positional data for [BinOp::kind], should typically be 1 behind [BinOp::right]
-    pub kind_pos: MetaPos,
 }
 
 /// Documentation string, commonly refered to as a "docstring", used to document
@@ -67,7 +62,7 @@ pub struct Doc {
     pub inner: String,
 
     /// Positional data
-    pub pos: MetaPos,
+    pub pos: Range<usize>,
 }
 
 impl fmt::Display for Doc {
@@ -82,7 +77,7 @@ pub struct Id {
     pub inner: String,
 
     /// Positional data
-    pub pos: MetaPos,
+    pub pos: Range<usize>,
 }
 
 /// Class definition
@@ -93,8 +88,8 @@ pub struct Class {
     /// Name of class
     pub name: Id,
 
-    /// Start position of this class
-    pub pos: MetaPos,
+    /// Positional data
+    pub pos: Range<usize>,
 }
 
 impl fmt::Display for Class {
@@ -119,8 +114,8 @@ pub struct Function {
     /// Body of function
     pub body: Vec<Expr>,
 
-    /// Start position of this function
-    pub pos: MetaPos,
+    /// Positional data
+    pub pos: Range<usize>,
 }
 
 impl fmt::Display for Function {
@@ -152,8 +147,8 @@ pub struct Method {
     /// method (defined with `.`)
     pub creation_method: bool,
 
-    /// Start position of this method
-    pub pos: MetaPos,
+    /// Positional data
+    pub pos: Range<usize>,
 }
 
 impl fmt::Display for Method {
@@ -177,13 +172,13 @@ mod tests {
                 Expr::Class(Class {
                     name: Id {
                         inner: "SomeClass".to_string(),
-                        pos: MetaPos::new()
+                        pos: 0..0
                     },
                     doc: Some(Doc {
                         inner: "hi".to_string(),
-                        pos: MetaPos::new()
+                        pos: 0..0
                     }),
-                    pos: MetaPos::new()
+                    pos: 0..0
                 })
             ),
             "hi".to_string()
@@ -198,11 +193,11 @@ mod tests {
                 Expr::Function(Function {
                     doc: Some(Doc {
                         inner: "hi".to_string(),
-                        pos: MetaPos::new()
+                        pos: 0..0
                     }),
                     args: vec![],
                     body: vec![],
-                    pos: MetaPos::new()
+                    pos: 0..0
                 })
             ),
             "hi".to_string()
@@ -217,16 +212,16 @@ mod tests {
                 Expr::Method(Method {
                     doc: Some(Doc {
                         inner: "hi".to_string(),
-                        pos: MetaPos::new()
+                        pos: 0..0
                     }),
                     args: vec![],
                     body: vec![],
                     class_name: Id {
                         inner: "Hi".to_string(),
-                        pos: MetaPos::new()
+                        pos: 0..0
                     },
                     creation_method: false,
-                    pos: MetaPos::new()
+                    pos: 0..0
                 })
             ),
             "hi".to_string()

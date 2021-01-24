@@ -2,30 +2,32 @@
 
 #![deny(unsafe_code)]
 
-use jingo_lib::{frontend::scanner, meta::Meta};
-use std::io::prelude::*;
-use std::{env, fmt, fs::File, path::PathBuf, process};
+mod file_pos;
+mod lex;
+mod utils;
+
+use file_pos::FilePos;
+use std::{env, process};
 
 /// Help infomation
-const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nA lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  build [FILE] — Compiles a file\n  help — Shows this help\n\nAdvanced options:\n  scan [FILE] — Returns scanning stage only\n  parse [FILE] — Returns parsing stage only";
+const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nA lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  build [FILE] — Compiles a file\n  help — Shows this help\n\nAdvanced options:\n  lex [FILE] — Returns lexing stage only";
 
 /// Command to run
 #[derive(Debug, Clone, PartialEq)]
-enum Command {
+pub enum Command {
     Compile,
     Run,
-    Scan,
-    Parse,
+    Lex,
 }
 
 /// Parsed cli
 #[derive(Debug, Clone, PartialEq)]
-struct Parsed {
+pub struct Parsed {
     /// The [Command] to run
-    command: Command,
+    pub command: Command,
 
     /// Data passed for a [Parsed::command]
-    data: Vec<String>,
+    pub data: Vec<String>,
 }
 
 impl Parsed {
@@ -40,7 +42,7 @@ impl Parsed {
     fn custom(args: Vec<String>) -> Self {
         // TODO: use [OsString]
         if args.len() == 0 {
-            help_exit("No arguments passed");
+            utils::help_exit("No arguments passed");
         }
 
         match args[0].as_str() {
@@ -56,95 +58,20 @@ impl Parsed {
                 command: Command::Compile,
                 data: args[1..].to_vec(),
             },
-            "scan" => Self {
-                command: Command::Scan,
+            "lex" => Self {
+                command: Command::Lex,
                 data: args[1..].to_vec(),
             },
-            "parse" => Self {
-                command: Command::Parse,
-                data: args[1..].to_vec(),
-            },
-            _ => help_exit(format!("Command '{}' not recognised", args[0])),
+            _ => utils::help_exit(format!("Command '{}' not recognised", args[0])),
         }
     }
-}
-
-/// Shows message then exits with code 1
-fn msg_exit(msg: impl fmt::Display) -> ! {
-    eprintln!("{}", msg);
-    process::exit(1)
-}
-
-/// Shows error message then exits with code 1
-fn error_exit(msg: impl fmt::Display) -> ! {
-    msg_exit(format!("Error in cli\n  {}", msg));
-}
-
-/// Shows error help message then exits with code 1
-fn help_exit(msg: impl fmt::Display) -> ! {
-    eprintln!("{}\n", HELP_INFO);
-    error_exit(msg)
-}
-
-/// Opens file or errors with frontend error
-fn open_file(filepath: impl Into<PathBuf>) -> String {
-    let filepath = filepath.into();
-
-    if !filepath.is_file() {
-        error_exit(format!("File {:?} doesn't exist", filepath))
-    }
-
-    let mut file = match File::open(filepath.clone()) {
-        Ok(x) => x,
-        Err(err) => error_exit(format!("Could not open {:?}, {}", filepath, err)),
-    };
-
-    let mut contents = String::new();
-
-    match file.read_to_string(&mut contents) {
-        Ok(_) => (),
-        Err(err) => error_exit(format!("Could not read {:?}, {}", filepath, err)),
-    };
-
-    contents
-}
-
-/// Runs [Command::Scan] steps
-fn run_scan(parsed: Parsed) {
-    if parsed.data.len() == 0 {
-        help_exit("No files passed for scanning")
-    } else if parsed.data.len() > 1 {
-        help_exit("More then one file passed for scanning")
-    }
-
-    let filepath = PathBuf::from(parsed.data[0].clone());
-    let scanned = scanner::launch(Meta::new(filepath.clone()), open_file(filepath));
-
-    match scanned {
-        Ok(output) => println!("Scanned output:\n{:#?}", output),
-        Err((err, meta)) => msg_exit(meta.error(err, "scanning")),
-    }
-}
-
-/// Runs [Command::Parse] steps
-fn run_parse(parsed: Parsed) {
-    if parsed.data.len() == 0 {
-        help_exit("No files passed for parsing")
-    } else if parsed.data.len() > 1 {
-        help_exit("More then one file passed for parsing")
-    }
-
-    let _ = PathBuf::from(parsed.data[0].clone());
-
-    todo!("parsing");
 }
 
 fn main() {
     let parsed = Parsed::new();
 
     match parsed.command {
-        Command::Scan => run_scan(parsed),
-        Command::Parse => run_parse(parsed),
+        Command::Lex => lex::launch(parsed),
         other => todo!("Finish ran '{:?}' command", other),
     }
 }
@@ -156,18 +83,11 @@ mod tests {
     #[test]
     fn basic_parse() {
         assert_eq!(
-            Parsed::custom(vec!["scan".to_string(), "test".to_string()]),
+            Parsed::custom(vec!["lex".to_string(), "test".to_string()]),
             Parsed {
-                command: Command::Scan,
+                command: Command::Lex,
                 data: vec!["test".to_string()]
             }
         );
-        assert_eq!(
-            Parsed::custom(vec!["help".to_string()]),
-            Parsed {
-                command: Command::Scan,
-                data: vec![]
-            }
-        )
     }
 }

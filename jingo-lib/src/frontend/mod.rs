@@ -1,5 +1,5 @@
 //! Frontend section, containing the frontend components of compilation such as
-//! scanning and parsing
+//! lexing/scanning and parsing
 
 pub mod ast;
-pub mod scanner;
+pub mod lexer;

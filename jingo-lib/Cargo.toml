@@ -7,3 +7,6 @@ repository = "https://github.com/owez/jingo"
 license = "MIT"
 readme = "../README.md"
 edition = "2018"
+
+[dependencies]
+logos = "0.11.4"
