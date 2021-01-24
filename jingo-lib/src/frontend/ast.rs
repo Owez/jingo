@@ -62,7 +62,7 @@ pub struct Doc {
     pub inner: String,
 
     /// Positional data
-    pub pos: Range<usize>,
+    pub range: Range<usize>,
 }
 
 impl fmt::Display for Doc {
@@ -77,7 +77,7 @@ pub struct Id {
     pub inner: String,
 
     /// Positional data
-    pub pos: Range<usize>,
+    pub range: Range<usize>,
 }
 
 /// Class definition
@@ -88,8 +88,8 @@ pub struct Class {
     /// Name of class
     pub name: Id,
 
-    /// Positional data
-    pub pos: Range<usize>,
+    /// Start ind
+    pub start: usize,
 }
 
 impl fmt::Display for Class {
@@ -114,8 +114,8 @@ pub struct Function {
     /// Body of function
     pub body: Vec<Expr>,
 
-    /// Positional data
-    pub pos: Range<usize>,
+    /// Start ind
+    pub start: usize,
 }
 
 impl fmt::Display for Function {
@@ -147,8 +147,8 @@ pub struct Method {
     /// method (defined with `.`)
     pub creation_method: bool,
 
-    /// Positional data
-    pub pos: Range<usize>,
+    /// Start ind
+    pub start: usize,
 }
 
 impl fmt::Display for Method {
@@ -172,13 +172,13 @@ mod tests {
                 Expr::Class(Class {
                     name: Id {
                         inner: "SomeClass".to_string(),
-                        pos: 0..0
+                        range: 0..0
                     },
                     doc: Some(Doc {
                         inner: "hi".to_string(),
-                        pos: 0..0
+                        range: 0..0
                     }),
-                    pos: 0..0
+                    start: 0
                 })
             ),
             "hi".to_string()
@@ -193,11 +193,11 @@ mod tests {
                 Expr::Function(Function {
                     doc: Some(Doc {
                         inner: "hi".to_string(),
-                        pos: 0..0
+                        range: 0..0
                     }),
                     args: vec![],
                     body: vec![],
-                    pos: 0..0
+                    start: 0
                 })
             ),
             "hi".to_string()
@@ -212,16 +212,16 @@ mod tests {
                 Expr::Method(Method {
                     doc: Some(Doc {
                         inner: "hi".to_string(),
-                        pos: 0..0
+                        range: 0..0
                     }),
                     args: vec![],
                     body: vec![],
                     class_name: Id {
                         inner: "Hi".to_string(),
-                        pos: 0..0
+                        range: 0..0
                     },
                     creation_method: false,
-                    pos: 0..0
+                    start: 0
                 })
             ),
             "hi".to_string()
