@@ -25,7 +25,7 @@ pub fn launch(parsed: Parsed) {
     loop {
         match lex.next() {
             Some(Token::Error) => msg_exit(format!(
-                "Error in {}\n  Invalid sequence whilst lexing: '{}'",
+                "Error in {}\n  Unknown token whilst lexing: '{}'",
                 FilePos::new(path, input, lex.span().start).unwrap(),
                 lex.slice()
             )),
