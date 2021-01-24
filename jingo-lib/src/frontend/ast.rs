@@ -164,3 +164,72 @@ impl fmt::Display for Method {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn class_doc() {
+        assert_eq!(
+            format!(
+                "{}",
+                Expr::Class(Class {
+                    name: Id {
+                        inner: "SomeClass".to_string(),
+                        pos: MetaPos::new()
+                    },
+                    doc: Some(Doc {
+                        inner: "hi".to_string(),
+                        pos: MetaPos::new()
+                    }),
+                    pos: MetaPos::new()
+                })
+            ),
+            "hi".to_string()
+        )
+    }
+
+    #[test]
+    fn function_doc() {
+        assert_eq!(
+            format!(
+                "{}",
+                Expr::Function(Function {
+                    doc: Some(Doc {
+                        inner: "hi".to_string(),
+                        pos: MetaPos::new()
+                    }),
+                    args: vec![],
+                    body: vec![],
+                    pos: MetaPos::new()
+                })
+            ),
+            "hi".to_string()
+        )
+    }
+
+    #[test]
+    fn method_doc() {
+        assert_eq!(
+            format!(
+                "{}",
+                Expr::Method(Method {
+                    doc: Some(Doc {
+                        inner: "hi".to_string(),
+                        pos: MetaPos::new()
+                    }),
+                    args: vec![],
+                    body: vec![],
+                    class_name: Id {
+                        inner: "Hi".to_string(),
+                        pos: MetaPos::new()
+                    },
+                    creation_method: false,
+                    pos: MetaPos::new()
+                })
+            ),
+            "hi".to_string()
+        )
+    }
+}
