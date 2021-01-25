@@ -29,6 +29,10 @@ pub enum Expr {
     Return(Return),
     Variable(Variable),
     SetVariable(SetVariable),
+    IntLit(IntLit),
+    FloatLit(FloatLit),
+    StringLit(StringLit),
+    CharLit(CharLit),
 }
 
 impl fmt::Display for Expr {
@@ -56,6 +60,8 @@ pub enum BinOpKind {
     NotEq,
     And,
     Or,
+    PlusEq,
+    SubEq,
 }
 
 /// Binary operation allowing two [Expr]s to be modified by a mathmatical notation
@@ -277,6 +283,42 @@ pub struct SetVariable {
 
     /// Expression determining what [SetVariable::id] should be set to
     pub expr: Box<Expr>,
+}
+
+/// Integer literal used for defining raw integers
+pub struct IntLit {
+    /// Actual integer used
+    pub inner: i64,
+
+    /// Positional data
+    pub range: Range<usize>,
+}
+
+/// Float literal used for defining raw floats
+pub struct FloatLit {
+    /// Actual float used
+    pub inner: f64,
+
+    /// Positional data
+    pub range: Range<usize>,
+}
+
+/// String literal used for defining raw strings
+pub struct StringLit {
+    /// Actual string used
+    pub inner: String,
+
+    /// Positional data
+    pub range: Range<usize>,
+}
+
+/// Char literal used for defining raw chars
+pub struct CharLit {
+    /// Actual char used
+    pub inner: char,
+
+    /// Positional data
+    pub range: Range<usize>,
 }
 
 #[cfg(test)]
