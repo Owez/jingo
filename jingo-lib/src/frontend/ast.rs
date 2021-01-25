@@ -24,6 +24,7 @@ pub enum Expr {
     Method(Method),
     If(If),
     While(While),
+    Return(Return),
 }
 
 impl fmt::Display for Expr {
@@ -43,15 +44,23 @@ pub enum BinOpKind {
     Sub,
     Mul,
     Div,
+    Greater,
+    GreaterEq,
+    Less,
+    LessEq,
+    EqEq,
+    NotEq,
+    And,
+    Or,
 }
 
 /// Binary operation allowing two [Expr]s to be modified by a mathmatical notation
 pub struct BinOp {
     /// Leftmost expression
-    pub left: Expr,
+    pub left: Box<Expr>,
 
     /// Rightmost expression
-    pub right: Expr,
+    pub right: Box<Expr>,
 
     /// Mathmatical notation to modifiy [BinOp::left] and [BinOp::right] together by
     pub kind: BinOpKind,
@@ -193,10 +202,19 @@ pub struct If {
 /// While loop, requiring a condition in order to fire the body repeatedly
 pub struct While {
     /// Condition needed in order to fire
-    pub condition: Expr,
+    pub condition: Box<Expr>,
 
     /// Body of while
     pub body: Vec<Expr>,
+
+    /// Start ind
+    pub start: usize,
+}
+
+/// Return expression allowing passback from functions
+pub struct Return {
+    /// Expression which returns values
+    pub expr: Box<Expr>,
 
     /// Start ind
     pub start: usize,
