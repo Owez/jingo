@@ -5,10 +5,6 @@ use std::{fmt, ops::Range};
 /// Expression kind enumeration for the AST, containing all possible varients for
 /// the AST to use
 ///
-/// You may be wanting to see [Expr], which is this main enumeration, combined
-/// with the [MetaPos] structure to give context to the positioning of the node
-/// in question
-///
 /// # Documentation generation
 ///
 /// All varients included in this enumeration are covered under the [fmt::Display]
@@ -231,7 +227,7 @@ pub struct IfDefault {
 }
 
 /// Broader structure for basic single-argument matching, allowing multiple
-/// [IfSegments] arranged as `if, else if, else if` and a [IfDefault] as `else`
+/// [IfSegment] arranged as `if, else if, else if` and a [IfDefault] as `else`
 pub struct If {
     pub segments: Vec<IfSegment>,
     pub default: Option<IfDefault>,

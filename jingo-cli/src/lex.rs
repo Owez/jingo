@@ -7,7 +7,7 @@ use jingo_lib::frontend::lexer::Token;
 use logos::Logos;
 use std::path::PathBuf;
 
-/// Runs [Command::Scan] steps
+/// Runs lexing steps
 pub fn launch(parsed: Parsed) {
     if parsed.data.len() == 0 {
         help_exit("No files passed for lexing")
