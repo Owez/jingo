@@ -68,8 +68,8 @@ pub enum Token {
     None,
     #[token("class")]
     Class,
-    #[token("for")]
-    For,
+    #[token("loop")]
+    Loop,
     #[token("while")]
     While,
     #[token("return")]

@@ -25,6 +25,8 @@ pub enum Expr {
     If(If),
     While(While),
     Return(Return),
+    Variable(Variable),
+    SetVariable(SetVariable),
 }
 
 impl fmt::Display for Expr {
@@ -218,6 +220,33 @@ pub struct Return {
 
     /// Start ind
     pub start: usize,
+}
+
+/// Variable definition, allowing reusability & refernce to given data, this
+/// structure defines the initial variable state which may be change if
+/// [Variable::mutable] is [true]
+pub struct Variable {
+    /// Determines if this variable is mutable
+    pub mutable: bool,
+
+    /// Variable identifier
+    pub id: Id,
+
+    /// Expression which determines initial variable state
+    pub expr: Box<Expr>,
+
+    /// Start ind
+    pub start: usize,
+}
+
+/// Variable setter for overwriting data in an existing [Variable] whilst
+/// [Variable::mutable] is [true]
+pub struct SetVariable {
+    /// Variable identifier ([Id::range.start] should be used as the start)
+    pub id: Id,
+
+    /// Expression determining what [SetVariable::id] should be set to
+    pub expr: Box<Expr>,
 }
 
 #[cfg(test)]
