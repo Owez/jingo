@@ -23,6 +23,7 @@ pub enum Expr {
     Function(Function),
     Method(Method),
     If(If),
+    While(While),
 }
 
 impl fmt::Display for Expr {
@@ -163,8 +164,8 @@ impl fmt::Display for Method {
 
 /// Basic single-argument matching as part of a broader [If]
 pub struct IfSegment {
-    /// Expression needed in order for [IfSegment::body] to run
-    pub predicate: Expr,
+    /// Condition needed in order to fire
+    pub condition: Expr,
 
     /// Body of if
     pub body: Vec<Expr>,
@@ -187,6 +188,18 @@ pub struct IfDefault {
 pub struct If {
     pub segments: Vec<IfSegment>,
     pub default: Option<IfDefault>,
+}
+
+/// While loop, requiring a condition in order to fire the body repeatedly
+pub struct While {
+    /// Condition needed in order to fire
+    pub condition: Expr,
+
+    /// Body of while
+    pub body: Vec<Expr>,
+
+    /// Start ind
+    pub start: usize,
 }
 
 #[cfg(test)]
