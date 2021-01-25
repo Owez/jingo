@@ -22,6 +22,8 @@ pub enum Expr {
     Class(Class),
     Function(Function),
     Method(Method),
+    FunctionCall(FunctionCall),
+    MethodCall(MethodCall),
     If(If),
     While(While),
     Return(Return),
@@ -121,6 +123,9 @@ pub struct Function {
     /// Function documentation
     pub doc: Option<Doc>,
 
+    /// Identifier of the function
+    pub id: Id,
+
     /// Allowed arguments to be passed
     pub args: Vec<String>,
 
@@ -146,15 +151,18 @@ pub struct Method {
     /// Method documentation
     pub doc: Option<Doc>,
 
+    /// Reference to the class name (which should be an existing [Class]) the
+    /// method is linked to
+    pub class_id: Id,
+
+    /// Identifier of the method
+    pub id: Id,
+
     /// Allowed arguments to be passed
     pub args: Vec<Id>,
 
     /// Body of method
     pub body: Vec<Expr>,
-
-    /// Reference to the class name (which should be an existing [Class]) this
-    /// method is linked to
-    pub class_name: Id,
 
     /// Distinguishes between a creation method (defined with `::`) or a normal
     /// method (defined with `.`)
@@ -171,6 +179,28 @@ impl fmt::Display for Method {
             None => write!(f, ""),
         }
     }
+}
+
+/// Caller for a function, allows invoking functions with passed arguments
+pub struct FunctionCall {
+    /// Identifier of the function ([Id::range.start] should be used as the start)
+    pub id: Id,
+
+    /// Argument to pass and invoke within the function
+    pub args: Vec<Expr>,
+}
+
+/// Caller for a method, allows invoking methods with passed arguments
+pub struct MethodCall {
+    /// Reference to the class name (which should be an existing [Class]) the
+    /// method is linked to
+    pub class_id: Id,
+
+    /// Identifier of the function ([Id::range.start] should be used as the start)
+    pub id: Id,
+
+    /// Argument to pass and invoke within the function
+    pub args: Vec<Expr>,
 }
 
 /// Basic single-argument matching as part of a broader [If]
@@ -284,6 +314,10 @@ mod tests {
                         inner: "hi".to_string(),
                         range: 0..0
                     }),
+                    id: Id {
+                        inner: "hi".to_string(),
+                        range: 0..0
+                    },
                     args: vec![],
                     body: vec![],
                     start: 0
@@ -303,9 +337,13 @@ mod tests {
                         inner: "hi".to_string(),
                         range: 0..0
                     }),
+                    id: Id {
+                        inner: "hi".to_string(),
+                        range: 0..0
+                    },
                     args: vec![],
                     body: vec![],
-                    class_name: Id {
+                    class_id: Id {
                         inner: "Hi".to_string(),
                         range: 0..0
                     },
