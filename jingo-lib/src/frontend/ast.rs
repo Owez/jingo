@@ -22,15 +22,16 @@ pub enum Expr {
     Class(Class),
     Function(Function),
     Method(Method),
+    If(If),
 }
 
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Expr::BinOp(_) => write!(f, ""),
             Expr::Class(class) => write!(f, "{}", class),
             Expr::Function(function) => write!(f, "{}", function),
             Expr::Method(method) => write!(f, "{}", method),
+            _ => write!(f, ""),
         }
     }
 }
@@ -46,10 +47,10 @@ pub enum BinOpKind {
 /// Binary operation allowing two [Expr]s to be modified by a mathmatical notation
 pub struct BinOp {
     /// Leftmost expression
-    pub left: Box<Expr>,
+    pub left: Expr,
 
     /// Rightmost expression
-    pub right: Box<Expr>,
+    pub right: Expr,
 
     /// Mathmatical notation to modifiy [BinOp::left] and [BinOp::right] together by
     pub kind: BinOpKind,
@@ -158,6 +159,34 @@ impl fmt::Display for Method {
             None => write!(f, ""),
         }
     }
+}
+
+/// Basic single-argument matching as part of a broader [If]
+pub struct IfSegment {
+    /// Expression needed in order for [IfSegment::body] to run
+    pub predicate: Expr,
+
+    /// Body of if
+    pub body: Vec<Expr>,
+
+    /// Start ind
+    pub start: usize,
+}
+
+/// Default value for [If] statement, typically known as `else`
+pub struct IfDefault {
+    /// Body of if default
+    pub body: Vec<Expr>,
+
+    /// Start ind
+    pub start: usize,
+}
+
+/// Broader structure for basic single-argument matching, allowing multiple
+/// [IfSegments] arranged as `if, else if, else if` and a [IfDefault] as `else`
+pub struct If {
+    pub segments: Vec<IfSegment>,
+    pub default: Option<IfDefault>,
 }
 
 #[cfg(test)]
