@@ -68,8 +68,8 @@ pub enum Token {
     None,
     #[token("class")]
     Class,
-    #[token("loop")]
-    Loop,
+    #[token("for")]
+    For,
     #[token("while")]
     While,
     #[token("return")]
@@ -94,9 +94,9 @@ pub enum Token {
     Id(String),
 
     // comments
-    #[regex("--.*", get_comment)]
+    #[regex(r"--.*", get_comment)]
     Comment(String),
-    #[regex("---.*", get_docstr)]
+    #[regex(r"---.*(\n---.*)*", get_docstr)]
     DocStr(String),
 
     // special
@@ -131,7 +131,44 @@ fn get_comment(lex: &mut Lexer<Token>) -> String {
 }
 
 fn get_docstr(lex: &mut Lexer<Token>) -> String {
-    lex.slice()[3..].trim().to_string()
+    lex.slice()
+        .split('\n')
+        .map(|s| s[3..].trim())
+        .collect::<Vec<&str>>()
+        .join("\n")
 }
 
-// TODO: test
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn comments() {
+        assert_eq!(
+            Token::lexer("--hi there").next().unwrap(),
+            Token::Comment("hi there".to_string())
+        );
+        assert_eq!(
+            Token::lexer("--     hi there     ").next().unwrap(),
+            Token::Comment("hi there".to_string())
+        );
+    }
+
+    #[test]
+    fn docstrs() {
+        assert_eq!(
+            Token::lexer("---hi there").next().unwrap(),
+            Token::DocStr("hi there".to_string())
+        );
+        assert_eq!(
+            Token::lexer("---     hi there     ").next().unwrap(),
+            Token::DocStr("hi there".to_string())
+        );
+        assert_eq!(
+            Token::lexer("---    hi there ---\n---   pretty cool eh?\n")
+                .next()
+                .unwrap(),
+            Token::DocStr("hi there ---\npretty cool eh?".to_string())
+        );
+    }
+}
