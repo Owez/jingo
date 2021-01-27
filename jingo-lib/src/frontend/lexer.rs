@@ -3,6 +3,7 @@
 
 use logos::{Lexer, Logos};
 
+/// Lexed token from [logos], encompassing all possible tokens
 #[derive(Logos, Debug, PartialEq)]
 pub enum Token {
     // single-char
@@ -96,8 +97,8 @@ pub enum Token {
     // comments
     #[regex(r"--.*", get_comment)]
     Comment(String),
-    #[regex(r"---.*(\n---.*)*", get_docstr)]
-    DocStr(String),
+    #[regex(r"---.*(\n---.*)*", get_doc)]
+    Doc(String),
 
     // special
     #[error]
@@ -130,7 +131,7 @@ fn get_comment(lex: &mut Lexer<Token>) -> String {
     lex.slice()[2..].trim().to_string()
 }
 
-fn get_docstr(lex: &mut Lexer<Token>) -> String {
+fn get_doc(lex: &mut Lexer<Token>) -> String {
     lex.slice()
         .split('\n')
         .map(|s| s[3..].trim())
@@ -155,20 +156,20 @@ mod tests {
     }
 
     #[test]
-    fn docstrs() {
+    fn docs() {
         assert_eq!(
             Token::lexer("---hi there").next().unwrap(),
-            Token::DocStr("hi there".to_string())
+            Token::Doc("hi there".to_string())
         );
         assert_eq!(
             Token::lexer("---     hi there     ").next().unwrap(),
-            Token::DocStr("hi there".to_string())
+            Token::Doc("hi there".to_string())
         );
         assert_eq!(
             Token::lexer("---    hi there ---\n---   pretty cool eh?\n")
                 .next()
                 .unwrap(),
-            Token::DocStr("hi there ---\npretty cool eh?".to_string())
+            Token::Doc("hi there ---\npretty cool eh?".to_string())
         );
     }
 }
