@@ -2,17 +2,18 @@ use super::{ast, lexer::Token};
 use logos::Lexer;
 use std::fmt;
 
-/// Errors which may occur during parsing, specifically from the [Parse] trait
+const INTERNAL: &str = ", internal fault";
+
+/// Parsing-specific error enumeration, encompassing the possible errors which
+/// may have occurred during parsing using the [Parse] trait
 ///
 /// See the [fmt::Display] trait implementation for user-specific documentation
 /// on each error variation.
-///
-/// This is also typically associated with a [Token] to give further context,
-/// with this enumeration just being the kind of error which occured.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseError {
     UnknownToken,
     UnexpectedEof,
+    InvalidContext,
 }
 
 impl<T> From<Option<T>> for ParseError {
@@ -34,30 +35,103 @@ impl fmt::Display for ParseError {
         match self {
             ParseError::UnknownToken => write!(f, "Unknown token"),
             ParseError::UnexpectedEof => write!(f, "File ended unexpectedly"),
+            ParseError::InvalidContext => write!(f, "Invalid context passed{}", INTERNAL),
         }
     }
 }
 
-fn parse_id<'a>(
-    lex: &'a mut Lexer<'a, Token>,
-) -> Result<ast::Id, (ParseError, &'a mut Lexer<'a, Token>)> {
-    match lex.next() {
-        Some(Token::Id(inner)) => Ok(ast::Id {
-            inner,
-            range: lex.span(),
-        }),
-        unknown => Err((unknown.into(), lex)),
+/// Parsing trait, defining parsing flow when provided with a lexed lexer stream
+pub trait Parse<'a>: Sized {
+    /// Parses inputted lexing stream
+    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError>;
+}
+
+impl<'a> Parse<'a> for ast::Id {
+    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+        match lex.next() {
+            Some(Token::Id(inner)) => Ok(Self {
+                inner,
+                range: lex.span(),
+            }),
+            unknown => Err(unknown.into()),
+        }
     }
 }
 
-fn parse_doc<'a>(
-    lex: &'a mut Lexer<'a, Token>,
-) -> Result<ast::Doc, (ParseError, &'a mut Lexer<'a, Token>)> {
-    match lex.next() {
-        Some(Token::Doc(inner)) => Ok(ast::Doc {
-            inner,
-            range: lex.span(),
-        }),
-        unknown => Err((unknown.into(), lex)),
+impl<'a> Parse<'a> for ast::Class {
+    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+        match lex.next() {
+            Some(Token::Class) => Ok(Self {
+                start: lex.span().start,
+                name: ast::Id::parse(lex)?,
+            }),
+            unknown => Err(unknown.into()),
+        }
+    }
+}
+
+impl<'a> Parse<'a> for ast::IntLit {
+    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+        match lex.next() {
+            Some(Token::Int(inner)) => Ok(Self {
+                inner,
+                range: lex.span(),
+            }),
+            unknown => Err(unknown.into()),
+        }
+    }
+}
+
+impl<'a> Parse<'a> for ast::FloatLit {
+    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+        match lex.next() {
+            Some(Token::Float(inner)) => Ok(Self {
+                inner,
+                range: lex.span(),
+            }),
+            unknown => Err(unknown.into()),
+        }
+    }
+}
+
+impl<'a> Parse<'a> for ast::CharLit {
+    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+        match lex.next() {
+            Some(Token::Char(inner)) => Ok(Self {
+                inner,
+                range: lex.span(),
+            }),
+            unknown => Err(unknown.into()),
+        }
+    }
+}
+
+// /// Runs through given tokens and checks [PartialEq] or errors
+// fn exp_tokens<'a>(lex: &'a mut Lexer<'a, Token>, tokens: Vec<Token>) -> Result<(), ParseError> {
+//     for token in tokens {
+//         match lex.next() {
+//             Some(token) => (),
+//             unknown => return Err(unknown.into()),
+//         }
+//     }
+
+//     Ok(())
+// }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::frontend::lexer::Token;
+    use logos::Logos;
+
+    #[test]
+    fn id() {
+        assert_eq!(
+            ast::Id::parse(&mut Token::lexer("cool_id")).unwrap(),
+            ast::Id {
+                inner: "cool_id".to_string(),
+                range: 0..7
+            }
+        );
     }
 }
