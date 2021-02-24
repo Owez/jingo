@@ -59,7 +59,7 @@ pub enum BinOpKind {
     SubEq,
 }
 
-/// Binary operation allowing two [ExprKind]s to be modified by a mathematical notation
+/// Binary operation allowing two [Expr]s to be modified by a mathematical notation
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinOp {
     /// Leftmost expression
@@ -80,7 +80,7 @@ pub struct Id(pub String);
 #[derive(Debug, Clone, PartialEq)]
 pub struct Class(pub Id);
 
-/// Subprogram allowing code modularity, recurses down into more [ExprKind]
+/// Subprogram allowing code modularity, recurses down into more [Expr]
 /// nodes. This is different from the [Method] structure as this one is for
 /// non-class-linked subprograms
 #[derive(Debug, Clone, PartialEq)]
@@ -92,7 +92,7 @@ pub struct Function {
     pub args: Vec<String>,
 
     /// Body of function
-    pub body: Vec<ExprKind>,
+    pub body: Vec<Expr>,
 }
 
 /// Class-linked subprogram similar to the base [Function], but is strictly linked
@@ -110,7 +110,7 @@ pub struct Method {
     pub args: Vec<Id>,
 
     /// Body of method
-    pub body: Vec<ExprKind>,
+    pub body: Vec<Expr>,
 
     /// Distinguishes between a creation method (defined with `::`) or a normal
     /// method (defined with `.`)
@@ -124,7 +124,7 @@ pub struct FunctionCall {
     pub id: Id,
 
     /// Argument to pass and invoke within the function
-    pub args: Vec<ExprKind>,
+    pub args: Vec<Expr>,
 }
 
 /// Caller for a method, allows invoking methods with passed arguments
@@ -138,22 +138,22 @@ pub struct MethodCall {
     pub id: Id,
 
     /// Argument to pass and invoke within the function
-    pub args: Vec<ExprKind>,
+    pub args: Vec<Expr>,
 }
 
 /// Basic single-argument matching as part of a broader [If]
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfSegment {
     /// Condition needed in order to fire
-    pub condition: ExprKind,
+    pub condition: Expr,
 
     /// Body of if
-    pub body: Vec<ExprKind>,
+    pub body: Vec<Expr>,
 }
 
 /// Default value for [If] statement, typically known as `else`
 #[derive(Debug, Clone, PartialEq)]
-pub struct IfDefault(Vec<ExprKind>);
+pub struct IfDefault(Vec<Expr>);
 
 /// Broader structure for basic single-argument matching
 #[derive(Debug, Clone, PartialEq)]
@@ -172,7 +172,7 @@ pub struct While {
     pub condition: Box<Expr>,
 
     /// Body of while
-    pub body: Vec<ExprKind>,
+    pub body: Vec<Expr>,
 }
 
 /// Return expression allowing pass-back from functions
