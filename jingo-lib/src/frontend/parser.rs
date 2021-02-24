@@ -2,8 +2,6 @@ use super::{ast, lexer::Token};
 use logos::Lexer;
 use std::fmt;
 
-const INTERNAL: &str = ", internal fault";
-
 /// Parsing-specific error enumeration, encompassing the possible errors which
 /// may have occurred during parsing using the [Parse] trait
 ///
@@ -13,7 +11,6 @@ const INTERNAL: &str = ", internal fault";
 pub enum ParseError {
     UnknownToken,
     UnexpectedEof,
-    InvalidContext,
 }
 
 impl<T> From<Option<T>> for ParseError {
@@ -35,7 +32,6 @@ impl fmt::Display for ParseError {
         match self {
             ParseError::UnknownToken => write!(f, "Unknown token"),
             ParseError::UnexpectedEof => write!(f, "File ended unexpectedly"),
-            ParseError::InvalidContext => write!(f, "Invalid context passed{}", INTERNAL),
         }
     }
 }
@@ -49,10 +45,7 @@ pub trait Parse<'a>: Sized {
 impl<'a> Parse<'a> for ast::Id {
     fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
-            Some(Token::Id(inner)) => Ok(Self {
-                inner,
-                range: lex.span(),
-            }),
+            Some(Token::Id(inner)) => Ok(Self(inner)),
             unknown => Err(unknown.into()),
         }
     }
@@ -61,10 +54,7 @@ impl<'a> Parse<'a> for ast::Id {
 impl<'a> Parse<'a> for ast::Class {
     fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
-            Some(Token::Class) => Ok(Self {
-                start: lex.span().start,
-                name: ast::Id::parse(lex)?,
-            }),
+            Some(Token::Class) => Ok(Self(ast::Id::parse(lex)?)),
             unknown => Err(unknown.into()),
         }
     }
@@ -73,10 +63,7 @@ impl<'a> Parse<'a> for ast::Class {
 impl<'a> Parse<'a> for ast::IntLit {
     fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
-            Some(Token::Int(inner)) => Ok(Self {
-                inner,
-                range: lex.span(),
-            }),
+            Some(Token::Int(inner)) => Ok(Self(inner)),
             unknown => Err(unknown.into()),
         }
     }
@@ -85,10 +72,7 @@ impl<'a> Parse<'a> for ast::IntLit {
 impl<'a> Parse<'a> for ast::FloatLit {
     fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
-            Some(Token::Float(inner)) => Ok(Self {
-                inner,
-                range: lex.span(),
-            }),
+            Some(Token::Float(inner)) => Ok(Self(inner)),
             unknown => Err(unknown.into()),
         }
     }
@@ -97,10 +81,7 @@ impl<'a> Parse<'a> for ast::FloatLit {
 impl<'a> Parse<'a> for ast::CharLit {
     fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
-            Some(Token::Char(inner)) => Ok(Self {
-                inner,
-                range: lex.span(),
-            }),
+            Some(Token::Char(inner)) => Ok(Self(inner)),
             unknown => Err(unknown.into()),
         }
     }
@@ -128,10 +109,15 @@ mod tests {
     fn id() {
         assert_eq!(
             ast::Id::parse(&mut Token::lexer("cool_id")).unwrap(),
-            ast::Id {
-                inner: "cool_id".to_string(),
-                range: 0..7
-            }
+            ast::Id("cool_id".to_string())
         );
+    }
+
+    #[test]
+    fn class() {
+        assert_eq!(
+            ast::Class::parse(&mut Token::lexer("class my_class")).unwrap(),
+            ast::Class(ast::Id("my_class".to_string()))
+        )
     }
 }

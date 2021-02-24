@@ -14,6 +14,9 @@ pub struct Expr {
 
     /// Optional documentation string
     doc: Option<String>,
+
+    /// Character range used for this expression
+    range: Range<usize>,
 }
 
 /// Expression kind enumeration for the AST, containing all possible variants for
@@ -71,23 +74,11 @@ pub struct BinOp {
 
 /// Pre-validated valid identifier
 #[derive(Debug, Clone, PartialEq)]
-pub struct Id {
-    /// Actual identifier name/data programmer passed
-    pub inner: String,
-
-    /// Positional data
-    pub range: Range<usize>,
-}
+pub struct Id(pub String);
 
 /// Class definition
 #[derive(Debug, Clone, PartialEq)]
-pub struct Class {
-    /// Name of class
-    pub name: Id,
-
-    /// Start ind
-    pub start: usize,
-}
+pub struct Class(pub Id);
 
 /// Subprogram allowing code modularity, recurses down into more [ExprKind]
 /// nodes. This is different from the [Method] structure as this one is for
@@ -102,9 +93,6 @@ pub struct Function {
 
     /// Body of function
     pub body: Vec<ExprKind>,
-
-    /// Start ind
-    pub start: usize,
 }
 
 /// Class-linked subprogram similar to the base [Function], but is strictly linked
@@ -127,9 +115,6 @@ pub struct Method {
     /// Distinguishes between a creation method (defined with `::`) or a normal
     /// method (defined with `.`)
     pub creation_method: bool,
-
-    /// Start ind
-    pub start: usize,
 }
 
 /// Caller for a function, allows invoking functions with passed arguments
@@ -164,20 +149,11 @@ pub struct IfSegment {
 
     /// Body of if
     pub body: Vec<ExprKind>,
-
-    /// Start ind
-    pub start: usize,
 }
 
 /// Default value for [If] statement, typically known as `else`
 #[derive(Debug, Clone, PartialEq)]
-pub struct IfDefault {
-    /// Body of if default
-    pub body: Vec<ExprKind>,
-
-    /// Start ind
-    pub start: usize,
-}
+pub struct IfDefault(Vec<ExprKind>);
 
 /// Broader structure for basic single-argument matching
 #[derive(Debug, Clone, PartialEq)]
@@ -197,20 +173,11 @@ pub struct While {
 
     /// Body of while
     pub body: Vec<ExprKind>,
-
-    /// Start ind
-    pub start: usize,
 }
 
 /// Return expression allowing pass-back from functions
 #[derive(Debug, Clone, PartialEq)]
-pub struct Return {
-    /// Expression to return result from
-    pub expr: Box<Expr>,
-
-    /// Start ind
-    pub start: usize,
-}
+pub struct Return(pub Box<Expr>);
 
 /// Variable definition, allowing reusability & reference to given data, this
 /// structure defines the initial variable state which may be change if
@@ -225,9 +192,6 @@ pub struct Variable {
 
     /// Expression which determines initial variable state
     pub expr: Box<Expr>,
-
-    /// Start ind
-    pub start: usize,
 }
 
 /// Variable setter for overwriting data in an existing [Variable] whilst
@@ -243,40 +207,16 @@ pub struct SetVariable {
 
 /// Integer literal used for defining raw integers
 #[derive(Debug, Clone, PartialEq)]
-pub struct IntLit {
-    /// Actual integer used
-    pub inner: i64,
-
-    /// Positional data
-    pub range: Range<usize>,
-}
+pub struct IntLit(pub i64);
 
 /// Float literal used for defining raw floats
 #[derive(Debug, Clone, PartialEq)]
-pub struct FloatLit {
-    /// Actual float used
-    pub inner: f64,
-
-    /// Positional data
-    pub range: Range<usize>,
-}
+pub struct FloatLit(pub f64);
 
 /// String literal used for defining raw strings
 #[derive(Debug, Clone, PartialEq)]
-pub struct StringLit {
-    /// Actual string used
-    pub inner: String,
-
-    /// Positional data
-    pub range: Range<usize>,
-}
+pub struct StringLit(pub String);
 
 /// Char literal used for defining raw chars
 #[derive(Debug, Clone, PartialEq)]
-pub struct CharLit {
-    /// Actual char used
-    pub inner: char,
-
-    /// Positional data
-    pub range: Range<usize>,
-}
+pub struct CharLit(pub char);
