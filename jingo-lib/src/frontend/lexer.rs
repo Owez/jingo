@@ -94,15 +94,13 @@ pub enum Token {
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", get_id)]
     Id(String),
 
-    // comments
-    #[regex(r"--.*", get_comment)]
-    Comment(String),
+    // misc
     #[regex(r"---.*(\n---.*)*", get_doc)]
     Doc(String),
 
     // special
     #[error]
-    #[regex(r"[ \t\n\f]+", logos::skip)]
+    #[regex(r"[ \t\n\f]+|--.*", logos::skip)]
     Error,
 }
 
@@ -127,10 +125,6 @@ fn get_id(lex: &mut Lexer<Token>) -> String {
     lex.slice().to_string()
 }
 
-fn get_comment(lex: &mut Lexer<Token>) -> String {
-    lex.slice()[2..].trim().to_string()
-}
-
 fn get_doc(lex: &mut Lexer<Token>) -> String {
     lex.slice()
         .split('\n')
@@ -142,18 +136,6 @@ fn get_doc(lex: &mut Lexer<Token>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn comments() {
-        assert_eq!(
-            Token::lexer("--hi there").next().unwrap(),
-            Token::Comment("hi there".to_string())
-        );
-        assert_eq!(
-            Token::lexer("--     hi there     ").next().unwrap(),
-            Token::Comment("hi there".to_string())
-        );
-    }
 
     #[test]
     fn docs() {
