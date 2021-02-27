@@ -13,10 +13,26 @@ pub struct Expr {
     kind: ExprKind,
 
     /// Optional documentation string
-    doc: Option<String>,
+    doc: String,
 
     /// Character range used for this expression
     range: Range<usize>,
+}
+
+impl Expr {
+    /// Shortcut method for getting from parsing
+    pub(crate) fn from_parse(
+        kind: impl Into<ExprKind>,
+        doc: &mut Vec<String>,
+        start: usize,
+        end: usize,
+    ) -> Self {
+        Self {
+            kind: kind.into(),
+            doc: doc.join("\n"),
+            range: start..end,
+        }
+    }
 }
 
 /// Expression kind enumeration for the AST, containing all possible variants for
@@ -72,6 +88,12 @@ pub struct BinOp {
     pub kind: BinOpKind,
 }
 
+impl From<BinOp> for ExprKind {
+    fn from(kind: BinOp) -> ExprKind {
+        ExprKind::BinOp(kind)
+    }
+}
+
 /// Pre-validated valid identifier
 #[derive(Debug, Clone, PartialEq)]
 pub struct Id(pub String);
@@ -79,6 +101,12 @@ pub struct Id(pub String);
 /// Class definition
 #[derive(Debug, Clone, PartialEq)]
 pub struct Class(pub Id);
+
+impl From<Class> for ExprKind {
+    fn from(kind: Class) -> ExprKind {
+        ExprKind::Class(kind)
+    }
+}
 
 /// Subprogram allowing code modularity, recurses down into more [Expr]
 /// nodes. This is different from the [Method] structure as this one is for
@@ -93,6 +121,12 @@ pub struct Function {
 
     /// Body of function
     pub body: Vec<Expr>,
+}
+
+impl From<Function> for ExprKind {
+    fn from(kind: Function) -> ExprKind {
+        ExprKind::Function(kind)
+    }
 }
 
 /// Class-linked subprogram similar to the base [Function], but is strictly linked
@@ -117,6 +151,12 @@ pub struct Method {
     pub body: Vec<Expr>,
 }
 
+impl From<Method> for ExprKind {
+    fn from(kind: Method) -> ExprKind {
+        ExprKind::Method(kind)
+    }
+}
+
 /// Caller for a function, allows invoking functions with passed arguments
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
@@ -125,6 +165,12 @@ pub struct FunctionCall {
 
     /// Argument to pass and invoke within the function
     pub args: Vec<Expr>,
+}
+
+impl From<FunctionCall> for ExprKind {
+    fn from(kind: FunctionCall) -> ExprKind {
+        ExprKind::FunctionCall(kind)
+    }
 }
 
 /// Caller for a method, allows invoking methods with passed arguments
@@ -139,6 +185,12 @@ pub struct MethodCall {
 
     /// Argument to pass and invoke within the function
     pub args: Vec<Expr>,
+}
+
+impl From<MethodCall> for ExprKind {
+    fn from(kind: MethodCall) -> ExprKind {
+        ExprKind::MethodCall(kind)
+    }
 }
 
 /// Basic single-argument matching as part of a broader [If]
@@ -165,6 +217,12 @@ pub struct If {
     pub default: Option<IfDefault>,
 }
 
+impl From<If> for ExprKind {
+    fn from(kind: If) -> ExprKind {
+        ExprKind::If(kind)
+    }
+}
+
 /// While loop, requiring a condition in order to fire the body repeatedly
 #[derive(Debug, Clone, PartialEq)]
 pub struct While {
@@ -175,9 +233,21 @@ pub struct While {
     pub body: Vec<Expr>,
 }
 
+impl From<While> for ExprKind {
+    fn from(kind: While) -> ExprKind {
+        ExprKind::While(kind)
+    }
+}
+
 /// Return expression allowing pass-back from functions
 #[derive(Debug, Clone, PartialEq)]
 pub struct Return(pub Box<Expr>);
+
+impl From<Return> for ExprKind {
+    fn from(kind: Return) -> ExprKind {
+        ExprKind::Return(kind)
+    }
+}
 
 /// Variable definition, allowing reusability & reference to given data, this
 /// structure defines the initial variable state which may be change if
@@ -194,6 +264,12 @@ pub struct Variable {
     pub expr: Box<Expr>,
 }
 
+impl From<Variable> for ExprKind {
+    fn from(kind: Variable) -> ExprKind {
+        ExprKind::Variable(kind)
+    }
+}
+
 /// Variable setter for overwriting data in an existing [Variable] whilst
 /// [Variable::mutable] is [true]
 #[derive(Debug, Clone, PartialEq)]
@@ -205,18 +281,48 @@ pub struct SetVariable {
     pub expr: Box<Expr>,
 }
 
+impl From<SetVariable> for ExprKind {
+    fn from(kind: SetVariable) -> ExprKind {
+        ExprKind::SetVariable(kind)
+    }
+}
+
 /// Integer literal used for defining raw integers
 #[derive(Debug, Clone, PartialEq)]
 pub struct IntLit(pub i64);
+
+impl From<IntLit> for ExprKind {
+    fn from(kind: IntLit) -> ExprKind {
+        ExprKind::IntLit(kind)
+    }
+}
 
 /// Float literal used for defining raw floats
 #[derive(Debug, Clone, PartialEq)]
 pub struct FloatLit(pub f64);
 
+impl From<FloatLit> for ExprKind {
+    fn from(kind: FloatLit) -> ExprKind {
+        ExprKind::FloatLit(kind)
+    }
+}
+
 /// String literal used for defining raw strings
 #[derive(Debug, Clone, PartialEq)]
 pub struct StringLit(pub String);
 
+impl From<StringLit> for ExprKind {
+    fn from(kind: StringLit) -> ExprKind {
+        ExprKind::StringLit(kind)
+    }
+}
+
 /// Char literal used for defining raw chars
 #[derive(Debug, Clone, PartialEq)]
 pub struct CharLit(pub char);
+
+impl From<CharLit> for ExprKind {
+    fn from(kind: CharLit) -> ExprKind {
+        ExprKind::CharLit(kind)
+    }
+}
