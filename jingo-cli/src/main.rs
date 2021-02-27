@@ -9,8 +9,8 @@ mod utils;
 use file_pos::FilePos;
 use std::{env, process};
 
-/// Help infomation
-const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nA lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE] — Compiles & runs a file\n  build [FILE] — Compiles a file\n  help — Shows this help\n\nAdvanced options:\n  lex [FILE] — Returns lexing stage only\n  parse [FILE] — Returns parsing stage only";
+/// Help information
+const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\n  A lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE]\tCompiles & runs a file\n  build [FILE]\tCompiles a file\n  help\t\tShows this help\n\nAdvanced options:\n  lex [FILE]\tShow lexing output\n  parse [FILE]\tShow parsing output";
 
 /// Command to run
 #[derive(Debug, Clone, PartialEq)]

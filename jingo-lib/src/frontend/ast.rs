@@ -40,7 +40,7 @@ pub enum ExprKind {
     CharLit(CharLit),
 }
 
-/// Binary operation varients, defining allowed types of a [BinOp] expression
+/// Binary operation variants, defining allowed types of a [BinOp] expression
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinOpKind {
     Add,
