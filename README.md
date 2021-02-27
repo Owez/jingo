@@ -15,12 +15,12 @@ class SomeClass;
 
 --- Creates new [SomeClass] from `x` value
 fun SomeClass::new(x) {
-  this.x = x;
+  self.x = x;
 }
 
 --- Multiplies number on record with `y`
 fun SomeClass.multiply(y) {
-  return this.x * y;
+  return self.x * y;
 }
 
 var my_class = SomeClass::new(3);
@@ -41,12 +41,13 @@ Usage: jingo [OPTIONS]
 A lightweight, high-level language designed for rapid prototyping
 
 Options:
-  run [FILE] — Compiles & runs a file
-  compile [FILE] — Compiles a file
-  help — Shows this help
+  run [FILE]    Compiles & runs a file
+  build [FILE]  Compiles a file
+  help          Shows this help
 
 Advanced options:
-  scan [FILE] — Returns scanning stage only
+  lex [FILE]    Show lexing output
+  parse [FILE]  Show parsing output
 ```
 
 ## Under the hood

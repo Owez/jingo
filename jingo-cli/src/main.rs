@@ -1,4 +1,4 @@
-//! CLI frotnend for the [Jingo](https://github.com/owez/jingo) language
+//! CLI frontend for the [Jingo](https://github.com/owez/jingo) language
 
 #![deny(unsafe_code)]
 
@@ -10,7 +10,7 @@ use file_pos::FilePos;
 use std::{env, process};
 
 /// Help information
-const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\n  A lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE]\tCompiles & runs a file\n  build [FILE]\tCompiles a file\n  help\t\tShows this help\n\nAdvanced options:\n  lex [FILE]\tShow lexing output\n  parse [FILE]\tShow parsing output";
+const HELP_INFO: &str = "Usage: jingo [OPTIONS]\n\nA lightweight, high-level language designed for rapid prototyping\n\nOptions:\n  run [FILE]\tCompiles & runs a file\n  build [FILE]\tCompiles a file\n  help\t\tShows this help\n\nAdvanced options:\n  lex [FILE]\tShow lexing output\n  parse [FILE]\tShow parsing output";
 
 /// Command to run
 #[derive(Debug, Clone, PartialEq)]
