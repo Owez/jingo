@@ -39,11 +39,11 @@ impl fmt::Display for ParseError {
 /// Parsing trait, defining parsing flow when provided with a lexed lexer stream
 pub trait Parse<'a>: Sized {
     /// Parses inputted lexing stream
-    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError>;
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError>;
 }
 
 impl<'a> Parse<'a> for ast::Id {
-    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
             Some(Token::Id(inner)) => Ok(Self(inner)),
             unknown => Err(unknown.into()),
@@ -52,7 +52,7 @@ impl<'a> Parse<'a> for ast::Id {
 }
 
 impl<'a> Parse<'a> for ast::Class {
-    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
             Some(Token::Class) => Ok(Self(ast::Id::parse(lex)?)),
             unknown => Err(unknown.into()),
@@ -60,8 +60,46 @@ impl<'a> Parse<'a> for ast::Class {
     }
 }
 
+impl<'a> Parse<'a> for ast::Function {
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+        next(lex, Token::Fun)?;
+        let id = ast::Id::parse(lex)?;
+
+        let args = subprogram_args(lex)?;
+        let body = brace_body(lex)?;
+
+        Ok(Self { id, args, body })
+    }
+}
+
+impl<'a> Parse<'a> for ast::Method {
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+        next(lex, Token::Fun)?;
+        let class_id = ast::Id::parse(lex)?;
+
+        let creation_method = match lex.next() {
+            Some(Token::Static) => true,
+            Some(Token::Dot) => false,
+            unknown => return Err(unknown.into()),
+        };
+
+        let id = ast::Id::parse(lex)?;
+
+        let args = subprogram_args(lex)?;
+        let body = brace_body(lex)?;
+
+        Ok(Self {
+            class_id,
+            creation_method,
+            id,
+            args,
+            body,
+        })
+    }
+}
+
 impl<'a> Parse<'a> for ast::IntLit {
-    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
             Some(Token::Int(inner)) => Ok(Self(inner)),
             unknown => Err(unknown.into()),
@@ -70,7 +108,7 @@ impl<'a> Parse<'a> for ast::IntLit {
 }
 
 impl<'a> Parse<'a> for ast::FloatLit {
-    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
             Some(Token::Float(inner)) => Ok(Self(inner)),
             unknown => Err(unknown.into()),
@@ -78,8 +116,17 @@ impl<'a> Parse<'a> for ast::FloatLit {
     }
 }
 
+impl<'a> Parse<'a> for ast::StringLit {
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+        match lex.next() {
+            Some(Token::Str(inner)) => Ok(Self(inner)),
+            unknown => Err(unknown.into()),
+        }
+    }
+}
+
 impl<'a> Parse<'a> for ast::CharLit {
-    fn parse(lex: &'a mut Lexer<'a, Token>) -> Result<Self, ParseError> {
+    fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseError> {
         match lex.next() {
             Some(Token::Char(inner)) => Ok(Self(inner)),
             unknown => Err(unknown.into()),
@@ -87,8 +134,41 @@ impl<'a> Parse<'a> for ast::CharLit {
     }
 }
 
+fn next<'a>(lex: &mut Lexer<'a, Token>, token: Token) -> Result<(), ParseError> {
+    let got = lex.next();
+
+    if got == Some(token) {
+        Ok(())
+    } else {
+        Err(got.into())
+    }
+}
+
+/// Gets arguments for a subprogram within `(x,y,z)` formatting
+fn subprogram_args<'a>(lex: &mut Lexer<'a, Token>) -> Result<Vec<ast::Id>, ParseError> {
+    next(lex, Token::ParenLeft)?;
+    let mut args = vec![];
+
+    loop {
+        args.push(ast::Id::parse(lex)?);
+
+        match lex.next() {
+            Some(Token::Comma) => (),
+            Some(Token::ParenRight) => break,
+            unknown => return Err(unknown.into()),
+        }
+    }
+
+    Ok(args)
+}
+
+/// Matches expressions until a symmetrical `{}` pair is found, making a body
+fn brace_body<'a>(_lex: &mut Lexer<'a, Token>) -> Result<Vec<ast::Expr>, ParseError> {
+    todo!("body parsing")
+}
+
 // /// Runs through given tokens and checks [PartialEq] or errors
-// fn exp_tokens<'a>(lex: &'a mut Lexer<'a, Token>, tokens: Vec<Token>) -> Result<(), ParseError> {
+// fn exp_tokens<'a>(lex: &mut Lexer<'a, Token>, tokens: Vec<Token>) -> Result<(), ParseError> {
 //     for token in tokens {
 //         match lex.next() {
 //             Some(token) => (),

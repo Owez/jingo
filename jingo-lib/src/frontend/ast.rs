@@ -89,7 +89,7 @@ pub struct Function {
     pub id: Id,
 
     /// Allowed arguments to be passed
-    pub args: Vec<String>,
+    pub args: Vec<Id>,
 
     /// Body of function
     pub body: Vec<Expr>,
@@ -103,6 +103,10 @@ pub struct Method {
     /// method is linked to
     pub class_id: Id,
 
+    /// Distinguishes between a creation method (defined with `::`) or a normal
+    /// method (defined with `.`)
+    pub creation_method: bool,
+
     /// Identifier of the method
     pub id: Id,
 
@@ -111,10 +115,6 @@ pub struct Method {
 
     /// Body of method
     pub body: Vec<Expr>,
-
-    /// Distinguishes between a creation method (defined with `::`) or a normal
-    /// method (defined with `.`)
-    pub creation_method: bool,
 }
 
 /// Caller for a function, allows invoking functions with passed arguments
