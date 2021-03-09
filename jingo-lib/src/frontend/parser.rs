@@ -2,235 +2,139 @@ use super::{ast::*, lexer::Token};
 use logos::Lexer;
 use std::fmt;
 
-const REPORT_BUG: &str = ", please report this as a bug";
-
 /// Parsing-specific error/stop enumeration, encompassing the possible errors or
 /// stops in parsing flow which may have occurred during parsing
 #[derive(Debug, Clone, PartialEq)]
-pub enum ParseStop {
+pub enum ParseError {
     /// Unexpected token
     UnexpectedToken,
 
     /// File ended unexpectedly
     UnexpectedEof,
 
-    /// Indicates that the file ended expectedly for the parser
-    FileEnded,
-
-    /// Parser returning documentation
-    FoundDoc(String),
+    /// Mathematical operation was found with no left clause
+    OpNoLeft,
 }
 
-impl<T> From<Option<T>> for ParseStop {
-    /// Matches basic parsing errors from an [Option], used for matching basic/common
-    /// parsing errors
-    ///
-    /// - [Some]: [ParseStop::UnexpectedToken]
-    /// - [None]: [ParseStop::UnexpectedEof]
-    fn from(option: Option<T>) -> ParseStop {
+impl<T> From<Option<T>> for ParseError {
+    fn from(option: Option<T>) -> ParseError {
         match option {
-            Some(_) => ParseStop::UnexpectedToken,
-            None => ParseStop::UnexpectedEof,
+            Some(_) => ParseError::UnexpectedToken,
+            None => ParseError::UnexpectedEof,
         }
     }
 }
 
-impl fmt::Display for ParseStop {
+impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseStop::UnexpectedToken => write!(f, "Unexpected token"),
-            ParseStop::UnexpectedEof => write!(f, "File ended unexpectedly"),
-            ParseStop::FileEnded => write!(f, "File ended expectedly{}", REPORT_BUG),
-            ParseStop::FoundDoc(_) => write!(f, "Writing doc to ast{}", REPORT_BUG),
+            ParseError::UnexpectedToken => write!(f, "Unexpected token"),
+            ParseError::UnexpectedEof => write!(f, "File ended unexpectedly"),
+            ParseError::OpNoLeft => {
+                write!(f, "Mathematical operation was found with no left clause")
+            }
         }
     }
 }
 
-pub fn launch<'a>(lex: &mut Lexer<'a, Token>) -> Result<Vec<Expr>, ParseStop> {
-    let mut output = Vec::new();
-    let mut doc = Vec::new();
-
-    loop {
-        match match_next(lex, &mut doc) {
-            Ok(expr) => output.push(expr),
-            Err(ParseStop::FileEnded) => break,
-            Err(err) => return Err(err),
-        }
-    }
-
-    Ok(output)
-}
-
-fn match_next<'a>(lex: &mut Lexer<'a, Token>, doc: &mut Vec<String>) -> Result<Expr, ParseStop> {
+/// Gets next expression in series by recursing down the ways, a low-level getter
+/// of the next full expression
+fn next(
+    lex: &mut Lexer<Token>,
+    buf: &mut Option<Expr>,
+    doc: Option<String>,
+) -> Result<Expr, ParseError> {
     let cur = lex.next();
     let start = lex.span().start;
 
     match cur {
-        Some(Token::Class) => Ok(Expr::from_parse(
-            Class::parse(lex)?,
-            doc,
+        Some(Token::Plus) => Ok(Expr::from_parse(
+            op_flow(lex, buf, OpKind::Add)?,
+            None,
             start,
-            lex.span().end,
         )),
-        Some(Token::Fun) => Ok(Expr::from_parse(fun_flow(lex)?, doc, start, lex.span().end)),
-        Some(Token::Doc(line)) => Err(ParseStop::FoundDoc(line)),
-        Some(_) => Err(ParseStop::UnexpectedToken),
-        None => Err(ParseStop::FileEnded),
+        Some(Token::FwdSlash) => Ok(Expr::from_parse(
+            op_flow(lex, buf, OpKind::Div)?,
+            None,
+            start,
+        )),
+        Some(Token::True) => Ok(Expr::from_parse(BoolLit(true), doc, start)),
+        Some(Token::False) => Ok(Expr::from_parse(BoolLit(false), doc, start)),
+        Some(Token::Let) => Ok(Expr::from_parse(let_flow(lex)?, doc, start)),
+        Some(Token::Return) => Ok(Expr::from_parse(Return(box_next(lex)?), doc, start)),
+        Some(Token::Str(d)) => Ok(Expr::from_parse(StrLit(d), doc, start)),
+        Some(Token::Char(d)) => Ok(Expr::from_parse(CharLit(d), doc, start)),
+        Some(Token::Float(d)) => Ok(Expr::from_parse(FloatLit(d), doc, start)),
+        Some(Token::Int(d)) => Ok(Expr::from_parse(IntLit(d), doc, start)),
+        Some(Token::Id(_id)) => todo!("parse id or setlet"),
+        Some(Token::Doc(string)) => next(lex, buf, Some(string)),
+        Some(_) => Err(ParseError::UnexpectedToken),
+        None => Err(ParseError::UnexpectedEof),
     }
 }
 
-/// Allows direct parsing from a raw [Lexer] stream if the next token is known
-trait DirectParse: Sized {
-    /// Parses next token in [Lexer] stream
-    fn parse<'a>(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseStop>;
+/// Flow for operation grammar, i.e. adding or subtracting
+fn op_flow(lex: &mut Lexer<Token>, buf: &mut Option<Expr>, kind: OpKind) -> Result<Op, ParseError> {
+    Ok(Op {
+        left: Box::new(buf.take().ok_or(ParseError::OpNoLeft)?),
+        right: box_next(lex)?,
+        kind,
+    })
 }
 
-impl DirectParse for Id {
-    fn parse<'a>(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseStop> {
-        match lex.next() {
-            Some(Token::Id(id)) => Ok(Self(id)),
-            unknown => Err(unknown.into()),
-        }
-    }
-}
-
-impl DirectParse for Class {
-    fn parse<'a>(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseStop> {
-        Ok(Self(Id::parse(lex)?))
-    }
-}
-
-/// Start of function flow
-fn fun_flow<'a>(lex: &mut Lexer<'a, Token>) -> Result<ExprKind, ParseStop> {
-    let first_id = Id::parse(lex)?;
-
+/// Flow for `let` grammar
+fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseError> {
     match lex.next() {
-        Some(Token::Static) => Ok(ExprKind::Method(get_method(lex, first_id, true)?)),
-        Some(Token::Dot) => Ok(ExprKind::Method(get_method(lex, first_id, false)?)),
-        Some(Token::ParenLeft) => Ok(ExprKind::Function(Function {
-            id: first_id,
-            args: subprogram_args(lex)?,
-            body: brace_body(lex)?,
-        })),
+        Some(Token::Mut) => Ok(Let {
+            mutable: true,
+            id: get_id(lex)?,
+            expr: box_next(lex)?,
+        }),
+        Some(Token::Id(id)) => Ok(Let {
+            mutable: false,
+            id: id.into(),
+            expr: box_next(lex)?,
+        }),
         unknown => Err(unknown.into()),
     }
 }
 
-fn get_method(
-    lex: &mut Lexer<Token>,
-    class_id: Id,
-    creation_method: bool,
-) -> Result<Method, ParseStop> {
-    Ok(Method {
-        id: Id::parse(lex)?,
-        creation_method,
-        class_id,
-        args: subprogram_args(lex)?,
-        body: brace_body(lex)?,
-    })
-}
-
-// /// Skips token cleanly as long as it matches inputted `token` enum
-// fn next<'a>(lex: &mut Lexer<'a, Token>, token: Token) -> Result<(), ParseStop> {
-//     let got = lex.next();
-
-//     if got == Some(token) {
-//         Ok(())
-//     } else {
-//         Err(got.into())
-//     }
-// }
-
-/// Gets arguments for a subprogram within `x,y,z)` formatting, assuming `(` has
-/// been taken by greedy parsing
-fn subprogram_args<'a>(lex: &mut Lexer<'a, Token>) -> Result<Vec<Id>, ParseStop> {
-    let mut args = vec![];
-
-    loop {
-        args.push(Id::parse(lex)?);
-
-        match lex.next() {
-            Some(Token::Comma) => (),
-            Some(Token::ParenRight) => break,
-            unknown => return Err(unknown.into()),
-        }
+/// Gets id from next [Lexer] token or errors
+fn get_id(lex: &mut Lexer<Token>) -> Result<Id, ParseError> {
+    match lex.next() {
+        Some(Token::Id(id)) => Ok(id.into()),
+        unknown => Err(unknown.into()),
     }
-
-    Ok(args)
 }
 
-/// Matches expressions until a symmetrical `{}` pair is found, making a body
-fn brace_body<'a>(_lex: &mut Lexer<'a, Token>) -> Result<Vec<Expr>, ParseStop> {
-    todo!("body parsing")
+/// Gets next expression without passing a previous `buf` of `doc` and returns a
+/// [Box], used as a shortcut for sequential parsing
+fn box_next(lex: &mut Lexer<Token>) -> Result<Box<Expr>, ParseError> {
+    Ok(Box::new(next(lex, &mut None, None)?))
 }
 
-// impl<'a> Parse<'a> for IntLit {
-//     fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseStop> {
-//         match lex.next() {
-//             Some(Token::Int(inner)) => Ok(Self(inner)),
-//             unknown => Err(unknown.into()),
-//         }
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use logos::Logos;
 
-// impl<'a> Parse<'a> for FloatLit {
-//     fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseStop> {
-//         match lex.next() {
-//             Some(Token::Float(inner)) => Ok(Self(inner)),
-//             unknown => Err(unknown.into()),
-//         }
-//     }
-// }
-
-// impl<'a> Parse<'a> for StringLit {
-//     fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseStop> {
-//         match lex.next() {
-//             Some(Token::Str(inner)) => Ok(Self(inner)),
-//             unknown => Err(unknown.into()),
-//         }
-//     }
-// }
-
-// impl<'a> Parse<'a> for CharLit {
-//     fn parse(lex: &mut Lexer<'a, Token>) -> Result<Self, ParseStop> {
-//         match lex.next() {
-//             Some(Token::Char(inner)) => Ok(Self(inner)),
-//             unknown => Err(unknown.into()),
-//         }
-//     }
-// }
-
-// // /// Runs through given tokens and checks [PartialEq] or errors
-// // fn exp_tokens<'a>(lex: &mut Lexer<'a, Token>, tokens: Vec<Token>) -> Result<(), ParseStop> {
-// //     for token in tokens {
-// //         match lex.next() {
-// //             Some(token) => (),
-// //             unknown => return Err(unknown.into()),
-// //         }
-// //     }
-
-// //     Ok(())
-// // }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::frontend::lexer::Token;
-//     use logos::Logos;
-
-//     #[test]
-//     fn id() {
-//         assert_eq!(
-//             Id::parse(&mut Token::lexer("cool_id")).unwrap(),
-//             Id("cool_id".to_string())
-//         );
-//     }
-
-//     #[test]
-//     fn class() {
-//         assert_eq!(
-//             Class::parse(&mut Token::lexer("class my_class")).unwrap(),
-//             Class(Id("my_class".to_string()))
-//         )
-//     }
-// }
+    #[test]
+    fn lets() {
+        assert_eq!(
+            next(&mut Token::lexer("let x = 5"), &mut None, None).unwrap(),
+            Expr {
+                kind: ExprKind::Let(Let {
+                    mutable: false,
+                    id: Id("x".to_string()),
+                    expr: Box::new(Expr {
+                        kind: ExprKind::IntLit(IntLit(5)),
+                        doc: None,
+                        start: 8
+                    })
+                }),
+                doc: None,
+                start: 0
+            }
+        );
+    }
+}

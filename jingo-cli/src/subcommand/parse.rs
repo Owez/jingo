@@ -1,8 +1,32 @@
 //! Parser runner
 
-use crate::Parsed;
+use crate::utils::{help_exit, msg_exit, open_file};
+use crate::{FilePos, Parsed};
+use jingo_lib::frontend::{lexer::Token, parser};
+use logos::Logos;
+use std::path::PathBuf;
 
 /// Runs parsing steps
 pub fn launch(parsed: Parsed) {
-    todo!("parsing from {:?}", parsed)
+    if parsed.data.len() == 0 {
+        help_exit("No files passed for parsing")
+    } else if parsed.data.len() > 1 {
+        help_exit("More then one file passed for parsing")
+    }
+
+    todo!("parsing");
+
+    // let path = PathBuf::from(parsed.data[0].clone());
+    // let input = &open_file(path.clone());
+
+    // let mut lex = Token::lexer(input);
+
+    // match parser::launch(&mut lex) {
+    //     Ok(_) => (),
+    //     Err(err) => msg_exit(format!(
+    //         "Error in {}\n  Parsing error: {}",
+    //         FilePos::new(path, input, lex.span().start).unwrap(),
+    //         err
+    //     )),
+    // }
 }

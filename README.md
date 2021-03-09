@@ -15,16 +15,18 @@ class SomeClass;
 
 --- Creates new [SomeClass] from `x` value
 fun SomeClass::new(x) {
-  self.x = x;
+    self.x = x;
 }
 
 --- Multiplies number on record with `y`
 fun SomeClass.multiply(y) {
-  return self.x * y;
+    return self.x * y;
 }
 
-var my_class = SomeClass::new(3);
-my_class.multiply(2); -- will be 3 * 2 = 6
+if 1 + 2 == 3 {
+    var my_class = SomeClass::new(3);
+    my_class.multiply(2); -- will be 3 * 2 = 6
+}
 ```
 
 ## Installation

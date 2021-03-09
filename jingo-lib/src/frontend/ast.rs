@@ -1,7 +1,5 @@
 //! Expression-centric abstract syntax tree for Jingo
 
-use std::ops::Range;
-
 /// Central expression structure, defining the fundamental structure of Jingo
 ///
 /// To parse into this structure and therefore an [ExprKind], please use the
@@ -10,27 +8,22 @@ use std::ops::Range;
 pub struct Expr {
     /// Kind/variant of this expression, this contains the underlying main data
     /// for an expression
-    kind: ExprKind,
+    pub kind: ExprKind,
 
     /// Optional documentation string
-    doc: String,
+    pub doc: Option<String>,
 
-    /// Character range used for this expression
-    range: Range<usize>,
+    /// Starting index of this expression
+    pub start: usize,
 }
 
 impl Expr {
     /// Shortcut method for getting from parsing
-    pub(crate) fn from_parse(
-        kind: impl Into<ExprKind>,
-        doc: &mut Vec<String>,
-        start: usize,
-        end: usize,
-    ) -> Self {
+    pub(crate) fn from_parse(kind: impl Into<ExprKind>, doc: Option<String>, start: usize) -> Self {
         Self {
             kind: kind.into(),
-            doc: doc.join("\n"),
-            range: start..end,
+            doc,
+            start,
         }
     }
 }
@@ -39,7 +32,7 @@ impl Expr {
 /// the AST to use, stemming from the central [Expr] structure
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind {
-    BinOp(BinOp),
+    Op(Op),
     Class(Class),
     Function(Function),
     Method(Method),
@@ -48,17 +41,18 @@ pub enum ExprKind {
     If(If),
     While(While),
     Return(Return),
-    Variable(Variable),
-    SetVariable(SetVariable),
+    Let(Let),
+    SetLet(SetLet),
     IntLit(IntLit),
     FloatLit(FloatLit),
-    StringLit(StringLit),
+    StrLit(StrLit),
     CharLit(CharLit),
+    BoolLit(BoolLit),
 }
 
-/// Binary operation variants, defining allowed types of a [BinOp] expression
+/// Binary operation variants, defining allowed types of a [Op] expression
 #[derive(Debug, Clone, PartialEq)]
-pub enum BinOpKind {
+pub enum OpKind {
     Add,
     Sub,
     Mul,
@@ -77,26 +71,32 @@ pub enum BinOpKind {
 
 /// Binary operation allowing two [Expr]s to be modified by a mathematical notation
 #[derive(Debug, Clone, PartialEq)]
-pub struct BinOp {
+pub struct Op {
     /// Leftmost expression
     pub left: Box<Expr>,
 
     /// Rightmost expression
     pub right: Box<Expr>,
 
-    /// Mathematical notation to modify [BinOp::left] and [BinOp::right] together by
-    pub kind: BinOpKind,
+    /// Mathematical notation to modify [Op::left] and [Op::right] together by
+    pub kind: OpKind,
 }
 
-impl From<BinOp> for ExprKind {
-    fn from(kind: BinOp) -> ExprKind {
-        ExprKind::BinOp(kind)
+impl From<Op> for ExprKind {
+    fn from(kind: Op) -> ExprKind {
+        ExprKind::Op(kind)
     }
 }
 
 /// Pre-validated valid identifier
 #[derive(Debug, Clone, PartialEq)]
 pub struct Id(pub String);
+
+impl From<String> for Id {
+    fn from(string: String) -> Self {
+        Id(string)
+    }
+}
 
 /// Class definition
 #[derive(Debug, Clone, PartialEq)]
@@ -249,41 +249,41 @@ impl From<Return> for ExprKind {
     }
 }
 
-/// Variable definition, allowing reusability & reference to given data, this
-/// structure defines the initial variable state which may be change if
-/// [Variable::mutable] is [true]
+/// Let definition, allowing reusability & reference to given data, this
+/// structure defines the initial let state which may be change if
+/// [Let::mutable] is [true]
 #[derive(Debug, Clone, PartialEq)]
-pub struct Variable {
-    /// Determines if this variable is mutable
+pub struct Let {
+    /// Determines if this Let is mutable
     pub mutable: bool,
 
-    /// Variable identifier
+    /// Let identifier
     pub id: Id,
 
-    /// Expression which determines initial variable state
+    /// Expression which determines initial Let state
     pub expr: Box<Expr>,
 }
 
-impl From<Variable> for ExprKind {
-    fn from(kind: Variable) -> ExprKind {
-        ExprKind::Variable(kind)
+impl From<Let> for ExprKind {
+    fn from(kind: Let) -> ExprKind {
+        ExprKind::Let(kind)
     }
 }
 
-/// Variable setter for overwriting data in an existing [Variable] whilst
-/// [Variable::mutable] is [true]
+/// Let setter for overwriting data in an existing [Let] whilst
+/// [Let::mutable] is [true]
 #[derive(Debug, Clone, PartialEq)]
-pub struct SetVariable {
-    /// Variable identifier ([Id::range.start] should be used as the start)
+pub struct SetLet {
+    /// Let identifier ([Id::range.start] should be used as the start)
     pub id: Id,
 
-    /// Expression determining what [SetVariable::id] should be set to
+    /// Expression determining what [SetLet::id] should be set to
     pub expr: Box<Expr>,
 }
 
-impl From<SetVariable> for ExprKind {
-    fn from(kind: SetVariable) -> ExprKind {
-        ExprKind::SetVariable(kind)
+impl From<SetLet> for ExprKind {
+    fn from(kind: SetLet) -> ExprKind {
+        ExprKind::SetLet(kind)
     }
 }
 
@@ -309,11 +309,11 @@ impl From<FloatLit> for ExprKind {
 
 /// String literal used for defining raw strings
 #[derive(Debug, Clone, PartialEq)]
-pub struct StringLit(pub String);
+pub struct StrLit(pub String);
 
-impl From<StringLit> for ExprKind {
-    fn from(kind: StringLit) -> ExprKind {
-        ExprKind::StringLit(kind)
+impl From<StrLit> for ExprKind {
+    fn from(kind: StrLit) -> ExprKind {
+        ExprKind::StrLit(kind)
     }
 }
 
@@ -324,5 +324,15 @@ pub struct CharLit(pub char);
 impl From<CharLit> for ExprKind {
     fn from(kind: CharLit) -> ExprKind {
         ExprKind::CharLit(kind)
+    }
+}
+
+/// Bool literal used for defining raw bools
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoolLit(pub bool);
+
+impl From<BoolLit> for ExprKind {
+    fn from(kind: BoolLit) -> ExprKind {
+        ExprKind::BoolLit(kind)
     }
 }

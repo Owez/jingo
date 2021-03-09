@@ -77,8 +77,10 @@ pub enum Token {
     Return,
     #[token("this")]
     This,
-    #[token("var")]
-    Var,
+    #[token("let")]
+    Let,
+    #[token("mut")]
+    Mut,
     #[token("fun")]
     Fun,
 
@@ -95,7 +97,7 @@ pub enum Token {
     Id(String),
 
     // misc
-    #[regex(r"---.*(\n---.*)*", get_doc)]
+    #[regex(r"---.*(\n+---.*)*", get_doc)]
     Doc(String),
 
     // special
@@ -126,9 +128,12 @@ fn get_id(lex: &mut Lexer<Token>) -> String {
 }
 
 fn get_doc(lex: &mut Lexer<Token>) -> String {
+    println!("{}", lex.slice());
+
     lex.slice()
         .split('\n')
-        .map(|s| s[3..].trim())
+        .filter(|l| l.len() != 0)
+        .map(|l| l[3..].trim())
         .collect::<Vec<&str>>()
         .join("\n")
 }
@@ -136,6 +141,35 @@ fn get_doc(lex: &mut Lexer<Token>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn basic() {
+        let mut lex =
+            Token::lexer("if true { false 0 1 0.01 }\nmy_id -- comment!\n--- docstring\ntrue");
+
+        assert_eq!(lex.next().unwrap(), Token::If);
+        assert_eq!(lex.next().unwrap(), Token::True);
+        assert_eq!(lex.next().unwrap(), Token::BraceLeft);
+        assert_eq!(lex.next().unwrap(), Token::False);
+        assert_eq!(lex.next().unwrap(), Token::Int(0));
+        assert_eq!(lex.next().unwrap(), Token::Int(1));
+        assert_eq!(lex.next().unwrap(), Token::Float(0.01));
+        assert_eq!(lex.next().unwrap(), Token::BraceRight);
+        assert_eq!(lex.next().unwrap(), Token::Id("my_id".to_string()));
+        assert_eq!(lex.next().unwrap(), Token::Doc("docstring".to_string()));
+        assert_eq!(lex.next().unwrap(), Token::True);
+    }
+
+    #[test]
+    fn check_get_doc() {
+        let mut lex = Token::lexer("--- hello\n---there\n---\n---  woo \n\n--- singleliner ---\n");
+
+        lex.next(); // this should return same as below but tested in [docs]
+        assert_eq!(
+            get_doc(&mut lex),
+            "hello\nthere\n\nwoo\nsingleliner ---".to_string()
+        );
+    }
 
     #[test]
     fn docs() {
