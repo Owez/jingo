@@ -97,12 +97,12 @@ pub enum Token {
     Id(String),
 
     // misc
-    #[regex(r"---.*(\n+---.*)*", get_doc)]
+    #[regex(r"---.*(\n---.*)*", get_doc)] // would be ---.*(\n+---.*)* but logos bug
     Doc(String),
 
     // special
     #[error]
-    #[regex(r"[ \t\n\f]+|--.*", logos::skip)]
+    #[regex(r"[ \t\n\f]+|(--.*)", logos::skip)]
     Error,
 }
 
@@ -128,8 +128,6 @@ fn get_id(lex: &mut Lexer<Token>) -> String {
 }
 
 fn get_doc(lex: &mut Lexer<Token>) -> String {
-    println!("{}", lex.slice());
-
     lex.slice()
         .split('\n')
         .filter(|l| l.len() != 0)
@@ -162,7 +160,7 @@ mod tests {
 
     #[test]
     fn check_get_doc() {
-        let mut lex = Token::lexer("--- hello\n---there\n---\n---  woo \n\n--- singleliner ---\n");
+        let mut lex = Token::lexer("--- hello\n---there\n---\n---  woo \n--- singleliner ---\n");
 
         lex.next(); // this should return same as below but tested in [docs]
         assert_eq!(
