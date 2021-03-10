@@ -21,8 +21,6 @@ pub enum Token {
     Dot,
     #[token(";")]
     Semicolon,
-    #[token("/")]
-    FwdSlash,
     #[token("*")]
     Star,
 
@@ -35,6 +33,8 @@ pub enum Token {
     Plus,
     #[token("-")]
     Minus,
+    #[token("/")]
+    FwdSlash,
     #[token("=")]
     Equals,
     #[token("==")]

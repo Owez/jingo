@@ -14,19 +14,17 @@ pub fn launch(parsed: Parsed) {
         help_exit("More then one file passed for parsing")
     }
 
-    todo!("parsing");
+    let path = PathBuf::from(parsed.data[0].clone());
+    let input = &open_file(path.clone());
 
-    // let path = PathBuf::from(parsed.data[0].clone());
-    // let input = &open_file(path.clone());
+    let mut lex = Token::lexer(input);
 
-    // let mut lex = Token::lexer(input);
-
-    // match parser::launch(&mut lex) {
-    //     Ok(_) => (),
-    //     Err(err) => msg_exit(format!(
-    //         "Error in {}\n  Parsing error: {}",
-    //         FilePos::new(path, input, lex.span().start).unwrap(),
-    //         err
-    //     )),
-    // }
+    match parser::launch(&mut lex) {
+        Ok(_) => (),
+        Err(err) => msg_exit(format!(
+            "Error in {}\n  Whilst parsing: {}",
+            FilePos::new(path, input, lex.span().start).unwrap(),
+            err
+        )),
+    }
 }

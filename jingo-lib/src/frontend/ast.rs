@@ -32,6 +32,7 @@ impl Expr {
 /// the AST to use, stemming from the central [Expr] structure
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind {
+    Not(Not),
     Op(Op),
     Class(Class),
     Function(Function),
@@ -50,23 +51,14 @@ pub enum ExprKind {
     BoolLit(BoolLit),
 }
 
-/// Binary operation variants, defining allowed types of a [Op] expression
+/// Right-associative not symbol
 #[derive(Debug, Clone, PartialEq)]
-pub enum OpKind {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Greater,
-    GreaterEq,
-    Less,
-    LessEq,
-    EqEq,
-    NotEq,
-    And,
-    Or,
-    PlusEq,
-    SubEq,
+pub struct Not(pub Box<Expr>); // NOTE: may be replaced by general right associative for references soon
+
+impl From<Not> for ExprKind {
+    fn from(kind: Not) -> ExprKind {
+        ExprKind::Not(kind)
+    }
 }
 
 /// Binary operation allowing two [Expr]s to be modified by a mathematical notation
@@ -86,6 +78,25 @@ impl From<Op> for ExprKind {
     fn from(kind: Op) -> ExprKind {
         ExprKind::Op(kind)
     }
+}
+
+/// Binary operation variants, defining allowed types of a [Op] expression
+#[derive(Debug, Clone, PartialEq)]
+pub enum OpKind {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Greater,
+    GreaterEq,
+    Less,
+    LessEq,
+    EqEq,
+    NotEq,
+    And,
+    Or,
+    PlusEq,
+    SubEq,
 }
 
 /// Pre-validated valid identifier
