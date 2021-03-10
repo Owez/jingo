@@ -19,18 +19,23 @@ pub fn launch(parsed: Parsed) {
     let input = &open_file(path.clone());
 
     let mut lex = Token::lexer(input);
+    let mut output = vec![];
 
-    println!("Found tokens:");
-
-    loop {
+    loop { // seperate loop in order to print all at once for error consistancy
         match lex.next() {
             Some(Token::Error) => msg_exit(format!(
                 "Error in {}\n  Unknown token whilst lexing: '{}'",
                 FilePos::new(path, input, lex.span().start).unwrap(),
                 lex.slice()
             )),
-            Some(token) => println!("- {:?} @ {:?}", token, lex.span()),
+            Some(token) => output.push((token, lex.span())),
             None => break,
         }
+    }
+
+    println!("Lexed tokens:");
+    
+    for (token, span) in output {
+        println!("- {:?} @ {:?}", token, span);
     }
 }
