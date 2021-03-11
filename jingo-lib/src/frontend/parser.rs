@@ -9,15 +9,14 @@ pub enum ParseStop {
     //
     // errors
     //
-    
     /// Unexpected token
     UnexpectedToken,
 
     /// Unknown token whilst lexing
     UnknownToken,
 
-    /// Mathematical operation was found with no left clause
-    OpNoLeft,
+    /// Operation was found with no lefthand expression
+    NoLeftExpr,
 
     /// File ended unexpectedly
     UnexpectedEof,
@@ -25,9 +24,8 @@ pub enum ParseStop {
     //
     // special
     //
-
     /// File ended expectedly
-    FileEnded
+    FileEnded,
 }
 
 impl<T> From<Option<T>> for ParseStop {
@@ -44,11 +42,13 @@ impl fmt::Display for ParseStop {
         match self {
             ParseStop::UnexpectedToken => write!(f, "Unexpected token"),
             ParseStop::UnknownToken => write!(f, "Unknown token"),
-            ParseStop::OpNoLeft => {
-                write!(f, "Mathematical operation was found with no left clause")
-            },
-            ParseStop::UnexpectedEof=> write!(f, "File ended unexpectedly"),
-            ParseStop::FileEnded => write!(f, "File ended expectedly, please report this as a bug!"),
+            ParseStop::NoLeftExpr => {
+                write!(f, "Operation was found with no lefthand expression")
+            }
+            ParseStop::UnexpectedEof => write!(f, "File ended unexpectedly"),
+            ParseStop::FileEnded => {
+                write!(f, "File ended expectedly, please report this as a bug!")
+            }
         }
     }
 }
@@ -66,17 +66,17 @@ pub fn launch(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
                 if buf_was_some && buf.is_some() {
                     output.push(buf.take().unwrap());
                 }
-                
+
                 buf = Some(expr);
-            },
+            }
             Err(ParseStop::FileEnded) => break,
-            Err(unknown) => return Err(unknown.into())
+            Err(unknown) => return Err(unknown.into()),
         }
     }
 
     match buf {
         Some(expr) => output.push(expr),
-        None => ()
+        None => (),
     }
 
     Ok(output)
@@ -87,7 +87,7 @@ fn next(
     lex: &mut Lexer<Token>,
     buf: &mut Option<Expr>,
     doc: Option<String>,
-    is_topmost: bool
+    is_topmost: bool,
 ) -> Result<Expr, ParseStop> {
     let cur = lex.next();
     let start = lex.span().start;
@@ -112,26 +112,26 @@ fn next(
         Some(Token::Char(d)) => Ok(Expr::from_parse(CharLit(d), doc, start)),
         Some(Token::Float(d)) => Ok(Expr::from_parse(FloatLit(d), doc, start)),
         Some(Token::Int(d)) => Ok(Expr::from_parse(IntLit(d), doc, start)),
-        Some(Token::Id(id)) => Ok(Expr::from_parse(id_flow(lex, Id(id))?, doc, start)),
+        Some(Token::Id(id)) => Ok(Expr::from_parse(path_flow(lex, vec![id])?, doc, start)),
         Some(Token::Doc(string)) => next(lex, buf, Some(string), is_topmost),
         Some(Token::Error) => Err(ParseStop::UnknownToken),
         Some(_) => Err(ParseStop::UnexpectedToken),
         None => Err(match is_topmost {
             true => ParseStop::FileEnded,
-            false => ParseStop::UnexpectedEof
+            false => ParseStop::UnexpectedEof,
         }),
     }
 }
 
-/// Flow for all which begin with an identifier, such as [Id] or [FunctionCall]
-fn id_flow(_lex: &mut Lexer<Token>, _id: Id) -> Result<ExprKind, ParseStop> {
-    todo!("id-based expressions")
+/// Path flow for all [Token::Path] or [Token::Id]
+fn path_flow(_lex: &mut Lexer<Token>, _path: Vec<String>) -> Result<ExprKind, ParseStop> {
+    todo!("path/id flow")
 }
 
 /// Flow for operation grammar, i.e. adding or subtracting
 fn op_flow(lex: &mut Lexer<Token>, buf: &mut Option<Expr>, kind: OpKind) -> Result<Op, ParseStop> {
     Ok(Op {
-        left: Box::new(buf.take().ok_or(ParseStop::OpNoLeft)?),
+        left: Box::new(buf.take().ok_or(ParseStop::NoLeftExpr)?),
         right: box_next(lex)?,
         kind,
     })
@@ -143,12 +143,18 @@ fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
         Some(Token::Mut) => Ok(Let {
             mutable: true,
             id: get_id(lex)?,
-            expr: {ensure(lex, Token::Equals)?; box_next(lex)?},
+            expr: {
+                ensure(lex, Token::Equals)?;
+                box_next(lex)?
+            },
         }),
         Some(Token::Id(id)) => Ok(Let {
             mutable: false,
             id: id.into(),
-            expr: {ensure(lex, Token::Equals)?; box_next(lex)?},
+            expr: {
+                ensure(lex, Token::Equals)?;
+                box_next(lex)?
+            },
         }),
         unknown => Err(unknown.into()),
     }
@@ -206,15 +212,25 @@ mod tests {
 
     #[test]
     fn basic_errs() {
-        assert_eq!(next(&mut Token::lexer("let x + 5"), &mut None, None, true), Err(ParseStop::UnexpectedToken));
-        assert_eq!(next(&mut Token::lexer("#"), &mut None, None, true), Err(ParseStop::UnknownToken));
-        assert_eq!(next(&mut Token::lexer("let x = -- 5"), &mut None, None, true), Err(ParseStop::UnexpectedEof));
+        assert_eq!(
+            next(&mut Token::lexer("let x + 5"), &mut None, None, true),
+            Err(ParseStop::UnexpectedToken)
+        );
+        assert_eq!(
+            next(&mut Token::lexer("#"), &mut None, None, true),
+            Err(ParseStop::UnknownToken)
+        );
+        assert_eq!(
+            next(&mut Token::lexer("let x = -- 5"), &mut None, None, true),
+            Err(ParseStop::UnexpectedEof)
+        );
     }
 
     #[test]
     fn parse_launch() {
         assert_eq!(
-            launch(&mut Token::lexer("5 + 3")).unwrap(), vec![Expr {
+            launch(&mut Token::lexer("5 + 3")).unwrap(),
+            vec![Expr {
                 kind: ExprKind::Op(Op {
                     left: Box::new(Expr {
                         kind: ExprKind::IntLit(IntLit(5)),
@@ -232,16 +248,26 @@ mod tests {
                 start: 2
             }]
         );
-        assert_eq!(launch(&mut Token::lexer("!5")).unwrap(), vec![Expr {
-            kind: ExprKind::Not(Not(Box::new(Expr {
-                kind: ExprKind::IntLit(IntLit(5)),
+        assert_eq!(
+            launch(&mut Token::lexer("!5")).unwrap(),
+            vec![Expr {
+                kind: ExprKind::Not(Not(Box::new(Expr {
+                    kind: ExprKind::IntLit(IntLit(5)),
+                    doc: None,
+                    start: 1
+                }))),
                 doc: None,
-                start: 1
-            }))),
-            doc: None,start: 0
-        }]);
-        assert_eq!(launch(&mut Token::lexer("+ 5")), Err(ParseStop::OpNoLeft));
-        assert_eq!(launch(&mut Token::lexer("5 +")), Err(ParseStop::UnexpectedEof));
-        assert_eq!(launch(&mut Token::lexer("5 + 5 + 5 +")), Err(ParseStop::UnexpectedEof));
+                start: 0
+            }]
+        );
+        assert_eq!(launch(&mut Token::lexer("+ 5")), Err(ParseStop::NoLeftExpr));
+        assert_eq!(
+            launch(&mut Token::lexer("5 +")),
+            Err(ParseStop::UnexpectedEof)
+        );
+        assert_eq!(
+            launch(&mut Token::lexer("5 + 5 + 5 +")),
+            Err(ParseStop::UnexpectedEof)
+        );
     }
 }

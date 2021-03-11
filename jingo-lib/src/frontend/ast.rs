@@ -34,6 +34,7 @@ impl Expr {
 pub enum ExprKind {
     Not(Not),
     Op(Op),
+    Path(Path),
     Class(Class),
     Function(Function),
     Method(Method),
@@ -109,6 +110,41 @@ impl From<String> for Id {
     }
 }
 
+/// Path to something, `::` seperated
+///
+/// # Internals
+///
+/// When parsing from a [Token::Path], it may be modified to remove the last few
+/// elements for nodes like [FunctionCall] with it's [FunctionCall::id] element
+#[derive(Debug, Clone, PartialEq)]
+pub struct Path(pub Vec<Id>);
+
+impl Path {
+    pub fn last(&mut self) -> Option<Id> {
+        self.0.pop()
+    }
+
+    pub fn last_2(&mut self) -> Option<(Id, Id)> {
+        match self.0.pop() {
+            Some(first) => match self.0.pop() {
+                Some(second) => Some((first, second)),
+                None => None,
+            },
+            None => None,
+        }
+    }
+
+    pub fn local(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl From<Path> for ExprKind {
+    fn from(kind: Path) -> ExprKind {
+        ExprKind::Path(kind)
+    }
+}
+
 /// Class definition
 #[derive(Debug, Clone, PartialEq)]
 pub struct Class(pub Id);
@@ -174,6 +210,9 @@ pub struct FunctionCall {
     /// Identifier of the function ([Id::range.start] should be used as the start)
     pub id: Id,
 
+    /// Path before [FunctionCall::Id] for scoping
+    pub path: Path,
+
     /// Argument to pass and invoke within the function
     pub args: Vec<Expr>,
 }
@@ -193,6 +232,9 @@ pub struct MethodCall {
 
     /// Identifier of the function ([Id::range.start] should be used as the start)
     pub id: Id,
+
+    /// Path before [MethodCall::class_id] and [MethodCall::Id] for scoping
+    pub path: Path,
 
     /// Argument to pass and invoke within the function
     pub args: Vec<Expr>,
@@ -287,6 +329,9 @@ impl From<Let> for ExprKind {
 pub struct SetLet {
     /// Let identifier ([Id::range.start] should be used as the start)
     pub id: Id,
+
+    /// Path to identifier
+    pub path: Path,
 
     /// Expression determining what [SetLet::id] should be set to
     pub expr: Box<Expr>,

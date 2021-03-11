@@ -21,7 +21,8 @@ pub fn launch(parsed: Parsed) {
     let mut lex = Token::lexer(input);
     let mut output = vec![];
 
-    loop { // seperate loop in order to print all at once for error consistancy
+    loop {
+        // seperate loop in order to print all at once for error consistancy
         match lex.next() {
             Some(Token::Error) => msg_exit(format!(
                 "Error in {}\n  Unknown token whilst lexing: '{}'",
@@ -34,7 +35,7 @@ pub fn launch(parsed: Parsed) {
     }
 
     println!("Lexed tokens:");
-    
+
     for (token, span) in output {
         println!("- {:?} @ {:?}", token, span);
     }
