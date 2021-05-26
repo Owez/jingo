@@ -1,3 +1,5 @@
+//! Parser for converting lexed tokens into the finalized abstract syntax tree
+
 use super::{ast::*, lexer::Token};
 use logos::Lexer;
 use std::fmt;
@@ -114,12 +116,32 @@ fn next(
         Some(Token::Int(d)) => Ok(Expr::from_parse(IntLit(d), doc, start)),
         Some(Token::Id(id)) => Ok(Expr::from_parse(path_flow(lex, vec![id])?, doc, start)),
         Some(Token::Doc(string)) => next(lex, buf, Some(string), is_topmost),
+        Some(Token::Fun) => Ok(Expr::from_parse(subprogram_flow(lex)?, doc, start)),
         Some(Token::Error) => Err(ParseStop::UnknownToken),
         Some(_) => Err(ParseStop::UnexpectedToken),
         None => Err(match is_topmost {
             true => ParseStop::FileEnded,
             false => ParseStop::UnexpectedEof,
         }),
+    }
+}
+
+/// Flow for subprograms such as functions or methods
+///
+/// # Parsing stages
+///
+/// As this flow gets complex in pathing, here are the explicit rules used:
+///
+/// - If its `x` then it must be a function
+/// - If its `x.y` then it must be a normal class function
+/// - If its `a::b::x.y` then it must be a pathed normal class function
+/// - If its `x::y` then it must be a class creation function
+/// - If its `a::b::x::y` then it must be a pathed class creation function
+fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<ExprKind, ParseStop> {
+    match lex.next().ok_or(ParseStop::UnexpectedEof)? {
+        Token::Id(_id) => todo!("function or method"),
+        Token::Path(_path) => todo!("pathed method or creation"),
+        _ => Err(ParseStop::UnexpectedToken),
     }
 }
 
