@@ -8,9 +8,9 @@ use std::fmt;
 /// stops in parsing flow which may have occurred during parsing
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseStop {
-    //
-    // errors
-    //
+    //--------//
+    // errors //
+    //--------//
     /// Unexpected token
     UnexpectedToken,
 
@@ -23,9 +23,9 @@ pub enum ParseStop {
     /// File ended unexpectedly
     UnexpectedEof,
 
-    //
-    // special
-    //
+    //---------//
+    // special //
+    //---------//
     /// File ended expectedly
     FileEnded,
 }
@@ -211,6 +211,10 @@ fn ensure(lex: &mut Lexer<Token>, token: Token) -> Result<(), ParseStop> {
 mod tests {
     use super::*;
     use logos::Logos;
+
+    // TODO: basic math
+    // TODO: boxed expressions
+    // TODO: order of operations
 
     #[test]
     fn lets() {

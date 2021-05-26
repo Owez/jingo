@@ -19,8 +19,6 @@ pub enum Token {
     Comma,
     #[token(".")]
     Dot,
-    #[token(";")]
-    Semicolon,
     #[token("*")]
     Star,
 

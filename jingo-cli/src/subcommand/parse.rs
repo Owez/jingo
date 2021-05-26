@@ -20,9 +20,9 @@ pub fn launch(parsed: Parsed) {
     let mut lex = Token::lexer(input);
 
     match parser::launch(&mut lex) {
-        Ok(parsed) => println!("Parsed expressions:\n{:#?}", parsed),
+        Ok(parsed) => println!("Parsed result ↴\n{:#?}", parsed),
         Err(err) => msg_exit(format!(
-            "Error in {}\n  Whilst parsing: {}",
+            "Error in {}\n  Whilst parsing → {}",
             FilePos::new(path, input, lex.span().start).unwrap(),
             err
         )),

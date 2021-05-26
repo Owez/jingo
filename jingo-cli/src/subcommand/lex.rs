@@ -2,7 +2,6 @@
 
 use crate::utils::{help_exit, msg_exit, open_file};
 use crate::{FilePos, Parsed};
-
 use jingo_lib::frontend::lexer::Token;
 use logos::Logos;
 use std::path::PathBuf;
@@ -25,7 +24,7 @@ pub fn launch(parsed: Parsed) {
         // seperate loop in order to print all at once for error consistancy
         match lex.next() {
             Some(Token::Error) => msg_exit(format!(
-                "Error in {}\n  Unknown token whilst lexing: '{}'",
+                "Error in {} ↴\n  Unknown token whilst lexing → {}",
                 FilePos::new(path, input, lex.span().start).unwrap(),
                 lex.slice()
             )),
@@ -34,7 +33,7 @@ pub fn launch(parsed: Parsed) {
         }
     }
 
-    println!("Lexed tokens:");
+    println!("Lexed result ↴");
 
     for (token, span) in output {
         println!("- {:?} @ {:?}", token, span);
