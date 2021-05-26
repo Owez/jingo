@@ -11,23 +11,29 @@ A small class-based program demonstrating the basic syntax of this language:
 
 ```none
 --- Small test class, helping to describe some features of Jingo
-class SomeClass;
+class SomeClass
 
 --- Creates new [SomeClass] from `x` value
 fun SomeClass::new(x) {
-    self.x = x;
+    self.x = x
 }
 
 --- Multiplies number on record with `y`
 fun SomeClass.multiply(y) {
-    return self.x * y;
+    return self.x * y
 }
 
 if 1 + 2 == 3 {
-    var my_class = SomeClass::new(3);
-    my_class.multiply(2); -- will be 3 * 2 = 6
+    var my_class = SomeClass::new(3)
+    my_class.multiply(2) -- will be 3 * 2 = 6
 }
 ```
+
+Jingo follows these rules for syntax:
+
+- No semi-colons or forced tabbing
+- Everything is an expression
+- OOP with insperation from lua
 
 ## Installation
 
@@ -51,15 +57,3 @@ Advanced options:
   lex [FILE]    Show lexing output
   parse [FILE]  Show parsing output
 ```
-
-## Under the hood
-
-The main general ruling Jingo sticks to for its syntax are:
-
-- Class-based OOP
-- Dynamic
-- Expression-centric; everything is an expression
-
-As for compiler backends, this repository may count as both a transpiler and compiler; the Jingo syntax is parsed then transpiled to a simple [LISP](https://en.wikipedia.org/wiki/Lisp_(programming_language)) intermediate representation which is further compiled into a single static binary. This approach allows easier implementation of Jingo using a widely used and understood technology, as well as the future possibility of importing LISP-based code/modules.
-
-Despite this, Jingo is not intended to be an abstract LISP flavour and considers it to be a suitable and extendible compiler backend, similar to other options like [LLVM](https://en.wikipedia.org/wiki/LLVM) or [cranelift](https://github.com/bytecodealliance/wasmtime/tree/main/cranelift).

@@ -114,7 +114,7 @@ fn next(
         Some(Token::Char(d)) => Ok(Expr::from_parse(CharLit(d), doc, start)),
         Some(Token::Float(d)) => Ok(Expr::from_parse(FloatLit(d), doc, start)),
         Some(Token::Int(d)) => Ok(Expr::from_parse(IntLit(d), doc, start)),
-        Some(Token::Id(id)) => Ok(Expr::from_parse(path_flow(lex, vec![id])?, doc, start)),
+        Some(Token::Id(id)) => Ok(Expr::from_parse(path_flow(lex, vec![id])?, doc, start)), // FIXME: there's also a path token now, this is for all that begin with an id
         Some(Token::Doc(string)) => next(lex, buf, Some(string), is_topmost),
         Some(Token::Fun) => Ok(Expr::from_parse(subprogram_flow(lex)?, doc, start)),
         Some(Token::Error) => Err(ParseStop::UnknownToken),
@@ -290,6 +290,76 @@ mod tests {
         assert_eq!(
             launch(&mut Token::lexer("5 + 5 + 5 +")),
             Err(ParseStop::UnexpectedEof)
+        );
+    }
+
+    #[test]
+    fn ids() {
+        assert_eq!(
+            launch(&mut Token::lexer("hello_there")).unwrap(),
+            vec![Expr {
+                kind: LetCall::from(Id("hello_there".to_string())).into(),
+                doc: None,
+                start: 0
+            }]
+        );
+        assert_ne!(
+            launch(&mut Token::lexer("hello1_there")).unwrap(),
+            vec![Expr {
+                kind: LetCall::from(Id("hello1_there".to_string())).into(),
+                doc: None,
+                start: 0
+            }]
+        );
+    }
+
+    #[test]
+    fn function_basics() {
+        assert_eq!(
+            launch(&mut Token::lexer("fn main() {}")).unwrap(),
+            vec![Expr {
+                kind: Function {
+                    id: Id("main".to_string()),
+                    args: vec![],
+                    body: vec![]
+                }
+                .into(),
+                doc: None,
+                start: 0
+            }]
+        );
+
+        let sixnine_plus_two = Expr {
+            kind: Op {
+                left: Box::new(Expr {
+                    kind: IntLit(69).into(),
+                    doc: None,
+                    start: 19,
+                }),
+                right: Box::new(Expr {
+                    kind: IntLit(2).into(),
+                    doc: None,
+                    start: 24,
+                }),
+                kind: OpKind::Add,
+            }
+            .into(),
+            doc: None,
+            start: 19,
+        };
+
+        assert_eq!(
+            launch(&mut Token::lexer("fn hello_there() { 69 + 2 }")).unwrap(),
+            vec![Expr {
+                kind: Function {
+                    id: Id("hello_there".to_string()).into(),
+                    args: vec![],
+                    body: vec![sixnine_plus_two]
+                }
+                .into(),
+                doc: None,
+                start: 0
+            }]
         );
     }
 }

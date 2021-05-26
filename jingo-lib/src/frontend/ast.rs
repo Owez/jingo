@@ -44,7 +44,8 @@ pub enum ExprKind {
     While(While),
     Return(Return),
     Let(Let),
-    SetLet(SetLet),
+    LetSet(LetSet),
+    LetCall(LetCall),
     IntLit(IntLit),
     FloatLit(FloatLit),
     StrLit(StrLit),
@@ -57,7 +58,7 @@ pub enum ExprKind {
 pub struct Not(pub Box<Expr>); // NOTE: may be replaced by general right associative for references soon
 
 impl From<Not> for ExprKind {
-    fn from(kind: Not) -> ExprKind {
+    fn from(kind: Not) -> Self {
         ExprKind::Not(kind)
     }
 }
@@ -76,7 +77,7 @@ pub struct Op {
 }
 
 impl From<Op> for ExprKind {
-    fn from(kind: Op) -> ExprKind {
+    fn from(kind: Op) -> Self {
         ExprKind::Op(kind)
     }
 }
@@ -120,6 +121,10 @@ impl From<String> for Id {
 pub struct Path(pub Vec<Id>);
 
 impl Path {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
     pub fn last(&mut self) -> Option<Id> {
         self.0.pop()
     }
@@ -140,7 +145,7 @@ impl Path {
 }
 
 impl From<Path> for ExprKind {
-    fn from(kind: Path) -> ExprKind {
+    fn from(kind: Path) -> Self {
         ExprKind::Path(kind)
     }
 }
@@ -150,7 +155,7 @@ impl From<Path> for ExprKind {
 pub struct Class(pub Id);
 
 impl From<Class> for ExprKind {
-    fn from(kind: Class) -> ExprKind {
+    fn from(kind: Class) -> Self {
         ExprKind::Class(kind)
     }
 }
@@ -171,7 +176,7 @@ pub struct Function {
 }
 
 impl From<Function> for ExprKind {
-    fn from(kind: Function) -> ExprKind {
+    fn from(kind: Function) -> Self {
         ExprKind::Function(kind)
     }
 }
@@ -199,7 +204,7 @@ pub struct Method {
 }
 
 impl From<Method> for ExprKind {
-    fn from(kind: Method) -> ExprKind {
+    fn from(kind: Method) -> Self {
         ExprKind::Method(kind)
     }
 }
@@ -207,7 +212,7 @@ impl From<Method> for ExprKind {
 /// Caller for a function, allows invoking functions with passed arguments
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
-    /// Identifier of the function ([Id::range.start] should be used as the start)
+    /// Identifier of the function
     pub id: Id,
 
     /// Path before [FunctionCall::Id] for scoping
@@ -218,7 +223,7 @@ pub struct FunctionCall {
 }
 
 impl From<FunctionCall> for ExprKind {
-    fn from(kind: FunctionCall) -> ExprKind {
+    fn from(kind: FunctionCall) -> Self {
         ExprKind::FunctionCall(kind)
     }
 }
@@ -230,7 +235,7 @@ pub struct MethodCall {
     /// method is linked to
     pub class_id: Id,
 
-    /// Identifier of the function ([Id::range.start] should be used as the start)
+    /// Identifier of the function
     pub id: Id,
 
     /// Path before [MethodCall::class_id] and [MethodCall::Id] for scoping
@@ -241,7 +246,7 @@ pub struct MethodCall {
 }
 
 impl From<MethodCall> for ExprKind {
-    fn from(kind: MethodCall) -> ExprKind {
+    fn from(kind: MethodCall) -> Self {
         ExprKind::MethodCall(kind)
     }
 }
@@ -271,7 +276,7 @@ pub struct If {
 }
 
 impl From<If> for ExprKind {
-    fn from(kind: If) -> ExprKind {
+    fn from(kind: If) -> Self {
         ExprKind::If(kind)
     }
 }
@@ -287,7 +292,7 @@ pub struct While {
 }
 
 impl From<While> for ExprKind {
-    fn from(kind: While) -> ExprKind {
+    fn from(kind: While) -> Self {
         ExprKind::While(kind)
     }
 }
@@ -297,7 +302,7 @@ impl From<While> for ExprKind {
 pub struct Return(pub Box<Expr>);
 
 impl From<Return> for ExprKind {
-    fn from(kind: Return) -> ExprKind {
+    fn from(kind: Return) -> Self {
         ExprKind::Return(kind)
     }
 }
@@ -318,28 +323,52 @@ pub struct Let {
 }
 
 impl From<Let> for ExprKind {
-    fn from(kind: Let) -> ExprKind {
+    fn from(kind: Let) -> Self {
         ExprKind::Let(kind)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LetCall {
+    /// Let identifier
+    pub id: Id,
+
+    /// Path to identifier
+    pub path: Path,
+}
+
+impl From<Id> for LetCall {
+    fn from(id: Id) -> Self {
+        Self {
+            id,
+            path: Path::new(),
+        }
+    }
+}
+
+impl From<LetCall> for ExprKind {
+    fn from(kind: LetCall) -> Self {
+        ExprKind::LetCall(kind)
     }
 }
 
 /// Let setter for overwriting data in an existing [Let] whilst
 /// [Let::mutable] is [true]
 #[derive(Debug, Clone, PartialEq)]
-pub struct SetLet {
-    /// Let identifier ([Id::range.start] should be used as the start)
+pub struct LetSet {
+    /// Let identifier
     pub id: Id,
 
     /// Path to identifier
     pub path: Path,
 
-    /// Expression determining what [SetLet::id] should be set to
+    /// Expression determining what [LetSet::id] should be set to
     pub expr: Box<Expr>,
 }
 
-impl From<SetLet> for ExprKind {
-    fn from(kind: SetLet) -> ExprKind {
-        ExprKind::SetLet(kind)
+impl From<LetSet> for ExprKind {
+    fn from(kind: LetSet) -> Self {
+        ExprKind::LetSet(kind)
     }
 }
 
@@ -348,7 +377,7 @@ impl From<SetLet> for ExprKind {
 pub struct IntLit(pub i64);
 
 impl From<IntLit> for ExprKind {
-    fn from(kind: IntLit) -> ExprKind {
+    fn from(kind: IntLit) -> Self {
         ExprKind::IntLit(kind)
     }
 }
@@ -358,7 +387,7 @@ impl From<IntLit> for ExprKind {
 pub struct FloatLit(pub f64);
 
 impl From<FloatLit> for ExprKind {
-    fn from(kind: FloatLit) -> ExprKind {
+    fn from(kind: FloatLit) -> Self {
         ExprKind::FloatLit(kind)
     }
 }
@@ -368,7 +397,7 @@ impl From<FloatLit> for ExprKind {
 pub struct StrLit(pub String);
 
 impl From<StrLit> for ExprKind {
-    fn from(kind: StrLit) -> ExprKind {
+    fn from(kind: StrLit) -> Self {
         ExprKind::StrLit(kind)
     }
 }
@@ -378,7 +407,7 @@ impl From<StrLit> for ExprKind {
 pub struct CharLit(pub char);
 
 impl From<CharLit> for ExprKind {
-    fn from(kind: CharLit) -> ExprKind {
+    fn from(kind: CharLit) -> Self {
         ExprKind::CharLit(kind)
     }
 }
@@ -388,7 +417,7 @@ impl From<CharLit> for ExprKind {
 pub struct BoolLit(pub bool);
 
 impl From<BoolLit> for ExprKind {
-    fn from(kind: BoolLit) -> ExprKind {
+    fn from(kind: BoolLit) -> Self {
         ExprKind::BoolLit(kind)
     }
 }
