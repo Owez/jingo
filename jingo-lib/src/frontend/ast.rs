@@ -111,18 +111,28 @@ impl From<String> for Id {
     }
 }
 
-/// Path to something, `::` seperated
+/// Segment of a [Path] which can either be static or dynamic
+pub struct PathSegment {
+    pub static_path: bool,
+    pub segments: Vec<Id>,
+}
+
+/// Path to something, `::` seperated and used for most places where you would have an identifier
 ///
 /// # Internals
 ///
 /// When parsing from a [Token::Path], it may be modified to remove the last few
 /// elements for nodes like [FunctionCall] with it's [FunctionCall::id] element
 #[derive(Debug, Clone, PartialEq)]
-pub struct Path(pub Vec<Id>);
+pub struct Path(pub Vec<PathSegment>);
 
 impl Path {
     pub fn new() -> Self {
         Self(Vec::new())
+    }
+
+    pub fn push(&mut self, segment: impl Into<PathSegment>) {
+        self.0.push(segment.into())
     }
 
     pub fn last(&mut self) -> Option<Id> {
@@ -165,8 +175,8 @@ impl From<Class> for ExprKind {
 /// non-class-linked subprograms
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    /// Identifier of the function
-    pub id: Id,
+    /// Path to this node
+    pub path: Path,
 
     /// Allowed arguments to be passed
     pub args: Vec<Id>,
@@ -185,16 +195,8 @@ impl From<Function> for ExprKind {
 /// to a certain class
 #[derive(Debug, Clone, PartialEq)]
 pub struct Method {
-    /// Reference to the class name (which should be an existing [Class]) the
-    /// method is linked to
-    pub class_id: Id,
-
-    /// Distinguishes between a creation method (defined with `::`) or a normal
-    /// method (defined with `.`)
-    pub creation_method: bool,
-
-    /// Identifier of the method
-    pub id: Id,
+    /// Path to this node
+    pub path: Path,
 
     /// Allowed arguments to be passed
     pub args: Vec<Id>,
@@ -212,10 +214,7 @@ impl From<Method> for ExprKind {
 /// Caller for a function, allows invoking functions with passed arguments
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
-    /// Identifier of the function
-    pub id: Id,
-
-    /// Path before [FunctionCall::Id] for scoping
+    /// Path to this node
     pub path: Path,
 
     /// Argument to pass and invoke within the function
@@ -226,23 +225,6 @@ impl From<FunctionCall> for ExprKind {
     fn from(kind: FunctionCall) -> Self {
         ExprKind::FunctionCall(kind)
     }
-}
-
-/// Caller for a method, allows invoking methods with passed arguments
-#[derive(Debug, Clone, PartialEq)]
-pub struct MethodCall {
-    /// Reference to the class name (which should be an existing [Class]) the
-    /// method is linked to
-    pub class_id: Id,
-
-    /// Identifier of the function
-    pub id: Id,
-
-    /// Path before [MethodCall::class_id] and [MethodCall::Id] for scoping
-    pub path: Path,
-
-    /// Argument to pass and invoke within the function
-    pub args: Vec<Expr>,
 }
 
 impl From<MethodCall> for ExprKind {
@@ -312,11 +294,11 @@ impl From<Return> for ExprKind {
 /// [Let::mutable] is [true]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Let {
+    /// Path to this node
+    pub path: Path,
+
     /// Determines if this Let is mutable
     pub mutable: bool,
-
-    /// Let identifier
-    pub id: Id,
 
     /// Expression which determines initial Let state
     pub expr: Box<Expr>,
@@ -329,20 +311,11 @@ impl From<Let> for ExprKind {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct LetCall {
-    /// Let identifier
-    pub id: Id,
+pub struct LetCall(pub Path);
 
-    /// Path to identifier
-    pub path: Path,
-}
-
-impl From<Id> for LetCall {
-    fn from(id: Id) -> Self {
-        Self {
-            id,
-            path: Path::new(),
-        }
+impl From<Path> for LetCall {
+    fn from(path: impl Into<Path>) -> Self {
+        Self(path.into())
     }
 }
 
@@ -356,10 +329,7 @@ impl From<LetCall> for ExprKind {
 /// [Let::mutable] is [true]
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetSet {
-    /// Let identifier
-    pub id: Id,
-
-    /// Path to identifier
+    /// Path to this node
     pub path: Path,
 
     /// Expression determining what [LetSet::id] should be set to

@@ -9,4 +9,4 @@ readme = "../README.md"
 edition = "2018"
 
 [dependencies]
-logos = "0.11.4"
+logos = "0.12"

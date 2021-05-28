@@ -17,14 +17,8 @@ pub enum Token {
     BraceRight,
     #[token(",")]
     Comma,
-    #[token(".")]
-    Dot,
     #[token("*")]
     Star,
-
-    // multi-char
-    #[token("::")]
-    Static,
 
     // math-only symbols
     #[token("+")]
@@ -91,10 +85,10 @@ pub enum Token {
     Float(f64),
     #[regex(r"[0-9]+", get_int)]
     Int(i64),
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", get_id)]
-    Id(String),
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*(::[a-zA-Z_][a-zA-Z0-9_]*)+", get_path)]
+    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*(::[a-zA-Z_][a-zA-Z0-9_]*)*", get_path)]
     Path(Vec<String>),
+    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*(.[a-zA-Z_][a-zA-Z0-9_]*)+", get_path_id)]
+    Field(Vec<String>),
 
     // misc
     #[regex(r"---.*(\n---.*)*", get_doc)] // would be ---.*(\n+---.*)* but logos bug
@@ -119,15 +113,17 @@ fn get_float(lex: &mut Lexer<Token>) -> Option<f64> {
     lex.slice().parse().ok()
 }
 
-
 fn get_id(lex: &mut Lexer<Token>) -> String {
     lex.slice().to_string()
 }
+
 fn get_path(lex: &mut Lexer<Token>) -> Vec<String> {
     lex.slice().split("::").map(|id| id.to_string()).collect()
 }
 
-
+fn get_path_id(lex: &mut Lexer<Token>) -> Vec<String> {
+    lex.slice().split('.').map(|id| id.to_string()).collect()
+}
 
 fn get_int(lex: &mut Lexer<Token>) -> Option<i64> {
     lex.slice().parse().ok()

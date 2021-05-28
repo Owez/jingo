@@ -114,7 +114,6 @@ fn next(
         Some(Token::Char(d)) => Ok(Expr::from_parse(CharLit(d), doc, start)),
         Some(Token::Float(d)) => Ok(Expr::from_parse(FloatLit(d), doc, start)),
         Some(Token::Int(d)) => Ok(Expr::from_parse(IntLit(d), doc, start)),
-        Some(Token::Id(id)) => Ok(Expr::from_parse(path_flow(lex, vec![id])?, doc, start)), // FIXME: there's also a path token now, this is for all that begin with an id
         Some(Token::Doc(string)) => next(lex, buf, Some(string), is_topmost),
         Some(Token::Fun) => Ok(Expr::from_parse(subprogram_flow(lex)?, doc, start)),
         Some(Token::Error) => Err(ParseStop::UnknownToken),
@@ -139,15 +138,11 @@ fn next(
 /// - If its `a::b::x::y` then it must be a pathed class creation function
 fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<ExprKind, ParseStop> {
     match lex.next().ok_or(ParseStop::UnexpectedEof)? {
-        Token::Id(_id) => todo!("function or method"),
-        Token::Path(_path) => todo!("pathed method or creation"),
+        Token::Id(_id) => todo!("basic function"),
+        Token::PathId(_path) => todo!("pathed subprograms"),
+        Token::PathStatic(_path) => todo!("pathed method or creation"),
         _ => Err(ParseStop::UnexpectedToken),
     }
-}
-
-/// Path flow for all [Token::Path] or [Token::Id]
-fn path_flow(_lex: &mut Lexer<Token>, _path: Vec<String>) -> Result<ExprKind, ParseStop> {
-    todo!("path/id flow")
 }
 
 /// Flow for operation grammar, i.e. adding or subtracting
