@@ -12,10 +12,10 @@ pub enum ParseStop {
     // errors //
     //--------//
     /// Unexpected token
-    UnexpectedToken,
+    UnexpectedToken(String),
 
     /// Unknown token whilst lexing
-    UnknownToken,
+    UnknownToken(String),
 
     /// Operation was found with no lefthand expression
     NoLeftExpr,
@@ -30,25 +30,17 @@ pub enum ParseStop {
     FileEnded,
 }
 
-impl<T> From<Option<T>> for ParseStop {
-    fn from(option: Option<T>) -> ParseStop {
-        match option {
-            Some(_) => ParseStop::UnexpectedToken,
-            None => ParseStop::UnexpectedEof,
-        }
-    }
-}
-
 impl fmt::Display for ParseStop {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseStop::UnexpectedToken => write!(f, "Unexpected token"),
-            ParseStop::UnknownToken => write!(f, "Unknown token"),
+            ParseStop::UnexpectedToken(slice) => write!(f, "Unexpected token '{}' found", slice),
+            ParseStop::UnknownToken(slice) => write!(f, "Unknown token '{}' found", slice),
             ParseStop::NoLeftExpr => {
                 write!(f, "Operation was found with no lefthand expression")
             }
             ParseStop::UnexpectedEof => write!(f, "File ended unexpectedly"),
             ParseStop::FileEnded => {
+
                 write!(f, "File ended expectedly, please report this as a bug!")
             }
         }
@@ -117,8 +109,8 @@ fn next(
         Some(Token::Doc(string)) => next(lex, buf, Some(string), is_topmost),
         Some(Token::Fun) => Ok(Expr::from_parse(subprogram_flow(lex)?, doc, start)),
         Some(Token::Path(_path)) => todo!("pathing"),
-        Some(Token::Error) => Err(ParseStop::UnknownToken),
-        Some(_) => Err(ParseStop::UnexpectedToken),
+        Some(Token::Error) => Err(ParseStop::UnknownToken(lex.slice().to_string())),
+        Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
         None => Err(match is_topmost {
             true => ParseStop::FileEnded,
             false => ParseStop::UnexpectedEof,
@@ -143,10 +135,10 @@ fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
             if let Token::Path(path) = lex.next().ok_or(ParseStop::UnexpectedEof)? {
                 Ok((path, true))
             } else {
-                Err(ParseStop::UnexpectedToken)
+                Err(ParseStop::UnexpectedToken(lex.slice().to_string()))
             }
         }
-        _ => Err(ParseStop::UnexpectedToken),
+        _ => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
     }?;
 
     ensure(lex, Token::Equals)?;
@@ -161,7 +153,7 @@ fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
 fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
     let path = match lex.next() {
         Some(Token::Path(path)) => Ok(path),
-        Some(_) => Err(ParseStop::UnknownToken),
+        Some(_) => Err(ParseStop::UnknownToken(lex.slice().to_string())),
         None => Err(ParseStop::UnexpectedEof),
     }?;
 
@@ -171,9 +163,12 @@ fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
 
     loop {
         match lex.next().ok_or(ParseStop::UnexpectedEof)? {
-            Token::Path(path) => args.push(path.to_id().ok_or(ParseStop::UnexpectedToken)?),
+            Token::Path(path) => args.push(
+                path.to_id()
+                    .ok_or(ParseStop::UnexpectedToken(lex.slice().to_string()))?,
+            ),
             Token::ParenRight => break,
-            _ => return Err(ParseStop::UnexpectedToken),
+            _ => return Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
         }
     }
 
@@ -184,13 +179,7 @@ fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
     loop {
         match next(lex, &mut None, None, false) {
             Ok(expr) => body.push(expr),
-            Err(ParseStop::UnexpectedToken) => {
-                if lex.slice() == "}" {
-                    break;
-                } else {
-                    return Err(ParseStop::UnexpectedToken);
-                }
-            }
+            Err(ParseStop::UnexpectedToken(slice)) if slice == String::from("}") => break,
             Err(err) => return Err(err),
         }
     }
@@ -214,12 +203,10 @@ fn box_next(lex: &mut Lexer<Token>) -> Result<Box<Expr>, ParseStop> {
 
 /// Ensures next lex token equals inputted `token` value
 fn ensure(lex: &mut Lexer<Token>, token: Token) -> Result<(), ParseStop> {
-    let next = lex.next();
-
-    if next == Some(token) {
-        Ok(())
-    } else {
-        Err(next.into())
+    match lex.next() {
+        Some(found) if found == token => Ok(()),
+        Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
+        None => Err(ParseStop::UnexpectedEof),
     }
 }
 
@@ -256,11 +243,11 @@ mod tests {
     fn basic_errs() {
         assert_eq!(
             next(&mut Token::lexer("let x + 5"), &mut None, None, true),
-            Err(ParseStop::UnexpectedToken)
+            Err(ParseStop::UnexpectedToken("+".to_string()))
         );
         assert_eq!(
             next(&mut Token::lexer("#"), &mut None, None, true),
-            Err(ParseStop::UnknownToken)
+            Err(ParseStop::UnknownToken("#".to_string()))
         );
         assert_eq!(
             next(&mut Token::lexer("let x = -- 5"), &mut None, None, true),
