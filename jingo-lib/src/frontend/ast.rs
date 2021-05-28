@@ -39,7 +39,6 @@ pub enum ExprKind {
     Function(Function),
     Method(Method),
     FunctionCall(FunctionCall),
-    MethodCall(MethodCall),
     If(If),
     While(While),
     Return(Return),
@@ -111,46 +110,29 @@ impl From<String> for Id {
     }
 }
 
-/// Segment of a [Path] which can either be static or dynamic
-pub struct PathSegment {
-    pub static_path: bool,
-    pub segments: Vec<Id>,
+impl From<&str> for Id {
+    fn from(string: &str) -> Self {
+        Id(string.to_string())
+    }
 }
 
-/// Path to something, `::` seperated and used for most places where you would have an identifier
-///
-/// # Internals
-///
-/// When parsing from a [Token::Path], it may be modified to remove the last few
-/// elements for nodes like [FunctionCall] with it's [FunctionCall::id] element
+/// Path to a node, with fields before separated with `.` towards a final identifier
 #[derive(Debug, Clone, PartialEq)]
-pub struct Path(pub Vec<PathSegment>);
+pub struct Path {
+    pub fields: Vec<Id>,
+    pub id: Id,
+}
 
 impl Path {
-    pub fn new() -> Self {
-        Self(Vec::new())
-    }
-
-    pub fn push(&mut self, segment: impl Into<PathSegment>) {
-        self.0.push(segment.into())
-    }
-
-    pub fn last(&mut self) -> Option<Id> {
-        self.0.pop()
-    }
-
-    pub fn last_2(&mut self) -> Option<(Id, Id)> {
-        match self.0.pop() {
-            Some(first) => match self.0.pop() {
-                Some(second) => Some((first, second)),
-                None => None,
-            },
-            None => None,
+    pub fn new(id: impl Into<String>) -> Self {
+        Self {
+            fields: vec![],
+            id: id.into().into(),
         }
     }
 
     pub fn local(&self) -> bool {
-        self.0.is_empty()
+        self.fields.is_empty()
     }
 }
 
@@ -175,7 +157,7 @@ impl From<Class> for ExprKind {
 /// non-class-linked subprograms
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    /// Path to this node
+    /// Path to the relevant node information
     pub path: Path,
 
     /// Allowed arguments to be passed
@@ -195,7 +177,7 @@ impl From<Function> for ExprKind {
 /// to a certain class
 #[derive(Debug, Clone, PartialEq)]
 pub struct Method {
-    /// Path to this node
+    /// Path to the relevant node information
     pub path: Path,
 
     /// Allowed arguments to be passed
@@ -214,7 +196,7 @@ impl From<Method> for ExprKind {
 /// Caller for a function, allows invoking functions with passed arguments
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
-    /// Path to this node
+    /// Path to the relevant node information
     pub path: Path,
 
     /// Argument to pass and invoke within the function
@@ -224,12 +206,6 @@ pub struct FunctionCall {
 impl From<FunctionCall> for ExprKind {
     fn from(kind: FunctionCall) -> Self {
         ExprKind::FunctionCall(kind)
-    }
-}
-
-impl From<MethodCall> for ExprKind {
-    fn from(kind: MethodCall) -> Self {
-        ExprKind::MethodCall(kind)
     }
 }
 
@@ -294,7 +270,7 @@ impl From<Return> for ExprKind {
 /// [Let::mutable] is [true]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Let {
-    /// Path to this node
+    /// Path to the relevant node information
     pub path: Path,
 
     /// Determines if this Let is mutable
@@ -314,7 +290,7 @@ impl From<Let> for ExprKind {
 pub struct LetCall(pub Path);
 
 impl From<Path> for LetCall {
-    fn from(path: impl Into<Path>) -> Self {
+    fn from(path: Path) -> Self {
         Self(path.into())
     }
 }
@@ -329,7 +305,7 @@ impl From<LetCall> for ExprKind {
 /// [Let::mutable] is [true]
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetSet {
-    /// Path to this node
+    /// Path to the relevant node information
     pub path: Path,
 
     /// Expression determining what [LetSet::id] should be set to

@@ -1,6 +1,7 @@
 //! Lexer/scanner stage of parsing, the first main step to parse raw characters
 //! into further parsable tokens
 
+use super::ast::{Id, Path};
 use logos::{Lexer, Logos};
 
 /// Lexed token from [logos], encompassing all possible tokens
@@ -85,10 +86,8 @@ pub enum Token {
     Float(f64),
     #[regex(r"[0-9]+", get_int)]
     Int(i64),
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*(::[a-zA-Z_][a-zA-Z0-9_]*)*", get_path)]
-    Path(Vec<String>),
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*(.[a-zA-Z_][a-zA-Z0-9_]*)+", get_path_id)]
-    Field(Vec<String>),
+    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*", get_path)]
+    Path(Path),
 
     // misc
     #[regex(r"---.*(\n---.*)*", get_doc)] // would be ---.*(\n+---.*)* but logos bug
@@ -113,16 +112,15 @@ fn get_float(lex: &mut Lexer<Token>) -> Option<f64> {
     lex.slice().parse().ok()
 }
 
-fn get_id(lex: &mut Lexer<Token>) -> String {
-    lex.slice().to_string()
-}
+fn get_path(lex: &mut Lexer<Token>) -> Path {
+    let mut fields: Vec<Id> = lex
+        .slice()
+        .split('.')
+        .map(|id| id.to_string().into())
+        .collect();
+    let id = fields.pop().unwrap();
 
-fn get_path(lex: &mut Lexer<Token>) -> Vec<String> {
-    lex.slice().split("::").map(|id| id.to_string()).collect()
-}
-
-fn get_path_id(lex: &mut Lexer<Token>) -> Vec<String> {
-    lex.slice().split('.').map(|id| id.to_string()).collect()
+    Path { fields, id }
 }
 
 fn get_int(lex: &mut Lexer<Token>) -> Option<i64> {
@@ -144,8 +142,9 @@ mod tests {
 
     #[test]
     fn basic() {
-        let mut lex =
-            Token::lexer("if true { false 0 1 0.01 }\nmy_id -- comment!\n--- docstring\ntrue");
+        let mut lex = Token::lexer(
+            "if true { false 0 1 0.01 }\nmy_id.one.five2 -- comment!\n--- docstring\ntrue",
+        );
 
         assert_eq!(lex.next().unwrap(), Token::If);
         assert_eq!(lex.next().unwrap(), Token::True);
@@ -155,7 +154,13 @@ mod tests {
         assert_eq!(lex.next().unwrap(), Token::Int(1));
         assert_eq!(lex.next().unwrap(), Token::Float(0.01));
         assert_eq!(lex.next().unwrap(), Token::BraceRight);
-        assert_eq!(lex.next().unwrap(), Token::Id("my_id".to_string()));
+        assert_eq!(
+            lex.next().unwrap(),
+            Token::Path(Path {
+                fields: vec!["my_id".into(), "one".into()],
+                id: "five2".into()
+            })
+        );
         assert_eq!(lex.next().unwrap(), Token::Doc("docstring".to_string()));
         assert_eq!(lex.next().unwrap(), Token::True);
     }

@@ -115,33 +115,14 @@ fn next(
         Some(Token::Float(d)) => Ok(Expr::from_parse(FloatLit(d), doc, start)),
         Some(Token::Int(d)) => Ok(Expr::from_parse(IntLit(d), doc, start)),
         Some(Token::Doc(string)) => next(lex, buf, Some(string), is_topmost),
-        Some(Token::Fun) => Ok(Expr::from_parse(subprogram_flow(lex)?, doc, start)),
+        Some(Token::Fun) => todo!("functions"),
+        Some(Token::Path(_path)) => todo!("pathing"),
         Some(Token::Error) => Err(ParseStop::UnknownToken),
         Some(_) => Err(ParseStop::UnexpectedToken),
         None => Err(match is_topmost {
             true => ParseStop::FileEnded,
             false => ParseStop::UnexpectedEof,
         }),
-    }
-}
-
-/// Flow for subprograms such as functions or methods
-///
-/// # Parsing stages
-///
-/// As this flow gets complex in pathing, here are the explicit rules used:
-///
-/// - If its `x` then it must be a function
-/// - If its `x.y` then it must be a normal class function
-/// - If its `a::b::x.y` then it must be a pathed normal class function
-/// - If its `x::y` then it must be a class creation function
-/// - If its `a::b::x::y` then it must be a pathed class creation function
-fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<ExprKind, ParseStop> {
-    match lex.next().ok_or(ParseStop::UnexpectedEof)? {
-        Token::Id(_id) => todo!("basic function"),
-        Token::PathId(_path) => todo!("pathed subprograms"),
-        Token::PathStatic(_path) => todo!("pathed method or creation"),
-        _ => Err(ParseStop::UnexpectedToken),
     }
 }
 
@@ -156,31 +137,31 @@ fn op_flow(lex: &mut Lexer<Token>, buf: &mut Option<Expr>, kind: OpKind) -> Resu
 
 /// Flow for `let` grammar
 fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
-    match lex.next() {
-        Some(Token::Mut) => Ok(Let {
-            mutable: true,
-            id: get_id(lex)?,
-            expr: {
-                ensure(lex, Token::Equals)?;
-                box_next(lex)?
-            },
-        }),
-        Some(Token::Id(id)) => Ok(Let {
-            mutable: false,
-            id: id.into(),
-            expr: {
-                ensure(lex, Token::Equals)?;
-                box_next(lex)?
-            },
-        }),
-        unknown => Err(unknown.into()),
-    }
+    let (path, mutable) = match lex.next().ok_or(ParseStop::UnexpectedEof)? {
+        Token::Path(path) => Ok((path, false)),
+        Token::Mut => {
+            if let Token::Path(path) = lex.next().ok_or(ParseStop::UnexpectedEof)? {
+                Ok((path, true))
+            } else {
+                Err(ParseStop::UnexpectedToken)
+            }
+        }
+        _ => Err(ParseStop::UnexpectedToken),
+    }?;
+
+    ensure(lex, Token::Equals)?;
+
+    Ok(Let {
+        path,
+        mutable,
+        expr: box_next(lex)?,
+    })
 }
 
-/// Gets id from next [Lexer] token or errors
-fn get_id(lex: &mut Lexer<Token>) -> Result<Id, ParseStop> {
+/// Gets path from next [Lexer] token or errors
+fn get_path(lex: &mut Lexer<Token>) -> Result<Path, ParseStop> {
     match lex.next() {
-        Some(Token::Id(id)) => Ok(id.into()),
+        Some(Token::Path(path)) => Ok(path),
         unknown => Err(unknown.into()),
     }
 }
@@ -218,7 +199,7 @@ mod tests {
             Expr {
                 kind: ExprKind::Let(Let {
                     mutable: false,
-                    id: Id("x".to_string()),
+                    path: Path::new("x".to_string()),
                     expr: Box::new(Expr {
                         kind: ExprKind::IntLit(IntLit(5)),
                         doc: None,
@@ -293,11 +274,20 @@ mod tests {
     }
 
     #[test]
-    fn ids() {
+    fn pathing() {
+        // basic tests are in lexer
         assert_eq!(
-            launch(&mut Token::lexer("hello_there")).unwrap(),
+            launch(&mut Token::lexer("hello_there.five.ten.fifteen")).unwrap(),
             vec![Expr {
-                kind: LetCall::from(Id("hello_there".to_string())).into(),
+                kind: LetCall::from(Path {
+                    fields: vec![
+                        "hello_there".into(),
+                        "five".into(),
+                        "ten".into()
+                    ],
+                    id: "fifteen".into()
+                })
+                .into(),
                 doc: None,
                 start: 0
             }]
@@ -305,7 +295,7 @@ mod tests {
         assert_ne!(
             launch(&mut Token::lexer("hello1_there")).unwrap(),
             vec![Expr {
-                kind: LetCall::from(Id("hello1_there".to_string())).into(),
+                kind: LetCall::from(Path::new("hello1_there")).into(),
                 doc: None,
                 start: 0
             }]
@@ -318,7 +308,7 @@ mod tests {
             launch(&mut Token::lexer("fn main() {}")).unwrap(),
             vec![Expr {
                 kind: Function {
-                    id: Id("main".to_string()),
+                    path: Path::new("main"),
                     args: vec![],
                     body: vec![]
                 }
@@ -351,7 +341,7 @@ mod tests {
             launch(&mut Token::lexer("fn hello_there() { 69 + 2 }")).unwrap(),
             vec![Expr {
                 kind: Function {
-                    id: Id("hello_there".to_string()).into(),
+                    path: Path::new("hello_there").into(),
                     args: vec![],
                     body: vec![sixnine_plus_two]
                 }
