@@ -2,6 +2,7 @@
 
 use crate::utils::{help_exit, msg_exit, open_file};
 use crate::{FilePos, Parsed};
+use ansi_term::Style;
 use jingo_lib::frontend::lexer::Token;
 use logos::Logos;
 use std::path::PathBuf;
@@ -21,12 +22,15 @@ pub fn launch(parsed: Parsed) {
     let mut output = vec![];
 
     loop {
-        // seperate loop in order to print all at once for error consistancy
+        // separate loop in order to print all at once for error consistency
         match lex.next() {
             Some(Token::Error) => msg_exit(format!(
-                "Error in {} ↴\n  Unknown token whilst lexing → {}",
+                "Error in {} ↴\n{}",
                 FilePos::new(path, input, lex.span().start).unwrap(),
-                lex.slice()
+                Style::new().bold().paint(format!(
+                    "  Unknown token was found whilst lexing → {}",
+                    lex.slice()
+                ))
             )),
             Some(token) => output.push((token, lex.span())),
             None => break,

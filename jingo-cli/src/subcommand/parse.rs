@@ -2,6 +2,7 @@
 
 use crate::utils::{help_exit, msg_exit, open_file};
 use crate::{FilePos, Parsed};
+use ansi_term::Style;
 use jingo_lib::frontend::{lexer::Token, parser};
 use logos::Logos;
 use std::path::PathBuf;
@@ -22,9 +23,11 @@ pub fn launch(parsed: Parsed) {
     match parser::launch(&mut lex) {
         Ok(parsed) => println!("Parsed result ↴\n{:#?}", parsed),
         Err(err) => msg_exit(format!(
-            "Error in {}\n  Whilst parsing → {}",
+            "Error in {}\n{}",
             FilePos::new(path, input, lex.span().start).unwrap(),
-            err
+            Style::new()
+                .bold()
+                .paint(format!("  Found something whilst parsing → {}", err))
         )),
     }
 }

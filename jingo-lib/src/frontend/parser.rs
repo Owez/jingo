@@ -280,11 +280,7 @@ mod tests {
             launch(&mut Token::lexer("hello_there.five.ten.fifteen")).unwrap(),
             vec![Expr {
                 kind: LetCall::from(Path {
-                    fields: vec![
-                        "hello_there".into(),
-                        "five".into(),
-                        "ten".into()
-                    ],
+                    fields: vec!["hello_there".into(), "five".into(), "ten".into()],
                     id: "fifteen".into()
                 })
                 .into(),

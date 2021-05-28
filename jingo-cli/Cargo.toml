@@ -11,4 +11,5 @@ edition = "2018"
 
 [dependencies]
 logos = "0.12"
+ansi_term = "0.12"
 jingo-lib = { path = "../jingo-lib" }
