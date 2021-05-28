@@ -104,12 +104,19 @@ fn get_str(lex: &mut Lexer<Token>) -> String {
     slice[1..slice.len() - 1].to_string()
 }
 
-fn get_char(lex: &mut Lexer<Token>) -> Option<char> {
-    lex.slice().parse().ok()
+fn get_char(lex: &mut Lexer<Token>) -> char {
+    let mut chars = lex.slice().chars();
+    chars.next();
+    chars.next_back();
+    chars.as_str().parse().unwrap()
 }
 
 fn get_float(lex: &mut Lexer<Token>) -> Option<f64> {
     lex.slice().parse().ok()
+}
+
+fn get_id(lex: &mut Lexer<Token>) -> Id {
+    lex.slice().into()
 }
 
 fn get_path(lex: &mut Lexer<Token>) -> Path {
@@ -139,6 +146,15 @@ fn get_doc(lex: &mut Lexer<Token>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn chars() {
+        let mut lex = Token::lexer("'a' 'b' '\\n'");
+
+        assert_eq!(lex.next().unwrap(), Token::Char('a'));
+        assert_eq!(lex.next().unwrap(), Token::Char('b'));
+        assert_eq!(lex.next().unwrap(), Token::Char('\n'));
+    }
 
     #[test]
     fn basic() {

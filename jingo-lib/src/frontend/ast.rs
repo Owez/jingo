@@ -134,6 +134,15 @@ impl Path {
     pub fn local(&self) -> bool {
         self.fields.is_empty()
     }
+
+    /// Converts to the single [Path::id] provided there are no other fields
+    pub fn to_id(self) -> Option<Id> {
+        if self.fields.len() != 0 {
+            None
+        } else {
+            Some(self.id)
+        }
+    }
 }
 
 impl From<Path> for ExprKind {

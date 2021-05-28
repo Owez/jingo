@@ -115,7 +115,7 @@ fn next(
         Some(Token::Float(d)) => Ok(Expr::from_parse(FloatLit(d), doc, start)),
         Some(Token::Int(d)) => Ok(Expr::from_parse(IntLit(d), doc, start)),
         Some(Token::Doc(string)) => next(lex, buf, Some(string), is_topmost),
-        Some(Token::Fun) => todo!("functions"),
+        Some(Token::Fun) => Ok(Expr::from_parse(subprogram_flow(lex)?, doc, start)),
         Some(Token::Path(_path)) => todo!("pathing"),
         Some(Token::Error) => Err(ParseStop::UnknownToken),
         Some(_) => Err(ParseStop::UnexpectedToken),
@@ -158,13 +158,53 @@ fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
     })
 }
 
-/// Gets path from next [Lexer] token or errors
-fn get_path(lex: &mut Lexer<Token>) -> Result<Path, ParseStop> {
-    match lex.next() {
+fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
+    let path = match lex.next() {
         Some(Token::Path(path)) => Ok(path),
-        unknown => Err(unknown.into()),
+        Some(_) => Err(ParseStop::UnknownToken),
+        None => Err(ParseStop::UnexpectedEof),
+    }?;
+
+    ensure(lex, Token::ParenLeft)?;
+
+    let mut args = vec![];
+
+    loop {
+        match lex.next().ok_or(ParseStop::UnexpectedEof)? {
+            Token::Path(path) => args.push(path.to_id().ok_or(ParseStop::UnexpectedToken)?),
+            Token::ParenRight => break,
+            _ => return Err(ParseStop::UnexpectedToken),
+        }
     }
+
+    ensure(lex, Token::BraceLeft)?;
+
+    let mut body = vec![];
+
+    loop {
+        match next(lex, &mut None, None, false) {
+            Ok(expr) => body.push(expr),
+            Err(ParseStop::UnexpectedToken) => {
+                if lex.slice() == "}" {
+                    break;
+                } else {
+                    return Err(ParseStop::UnexpectedToken);
+                }
+            }
+            Err(err) => return Err(err),
+        }
+    }
+
+    Ok(Function { path, args, body })
 }
+
+// /// Gets path from next [Lexer] token or errors
+// fn get_path(lex: &mut Lexer<Token>) -> Result<Path, ParseStop> {
+//     match lex.next() {
+//         Some(Token::Path(path)) => Ok(path),
+//         unknown => Err(unknown.into()),
+//     }
+// }
 
 /// Gets next expression without passing a previous `buf` of `doc` and returns a
 /// [Box], used as a shortcut for sequential parsing
@@ -301,12 +341,37 @@ mod tests {
     #[test]
     fn function_basics() {
         assert_eq!(
-            launch(&mut Token::lexer("fn main() {}")).unwrap(),
+            launch(&mut Token::lexer("fun main() {}")).unwrap(),
             vec![Expr {
                 kind: Function {
                     path: Path::new("main"),
                     args: vec![],
                     body: vec![]
+                }
+                .into(),
+                doc: None,
+                start: 0
+            }]
+        );
+
+        assert_eq!(
+            launch(&mut Token::lexer("fun main() { 1 'c' }")).unwrap(),
+            vec![Expr {
+                kind: Function {
+                    path: Path::new("main"),
+                    args: vec![],
+                    body: vec![
+                        Expr {
+                            kind: ExprKind::IntLit(IntLit(1)),
+                            doc: None,
+                            start: 13
+                        },
+                        Expr {
+                            kind: ExprKind::CharLit(CharLit('c')),
+                            doc: None,
+                            start: 15
+                        }
+                    ]
                 }
                 .into(),
                 doc: None,
@@ -334,7 +399,7 @@ mod tests {
         };
 
         assert_eq!(
-            launch(&mut Token::lexer("fn hello_there() { 69 + 2 }")).unwrap(),
+            launch(&mut Token::lexer("fun hello_there() { 69 + 2 }")).unwrap(),
             vec![Expr {
                 kind: Function {
                     path: Path::new("hello_there").into(),
