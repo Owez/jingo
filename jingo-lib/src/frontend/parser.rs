@@ -40,7 +40,6 @@ impl fmt::Display for ParseStop {
             }
             ParseStop::UnexpectedEof => write!(f, "File ended unexpectedly"),
             ParseStop::FileEnded => {
-
                 write!(f, "File ended expectedly, please report this as a bug!")
             }
         }
@@ -89,26 +88,28 @@ fn next(
     match cur {
         Some(Token::Plus) => Ok(Expr::from_parse(
             op_flow(lex, buf, OpKind::Add)?,
-            None,
+            doc,
             start,
         )),
         Some(Token::FwdSlash) => Ok(Expr::from_parse(
             op_flow(lex, buf, OpKind::Div)?,
-            None,
+            doc,
             start,
         )),
         Some(Token::Exclaim) => Ok(Expr::from_parse(Not(box_next(lex)?), doc, start)),
         Some(Token::True) => Ok(Expr::from_parse(BoolLit(true), doc, start)),
         Some(Token::False) => Ok(Expr::from_parse(BoolLit(false), doc, start)),
         Some(Token::Let) => Ok(Expr::from_parse(let_flow(lex)?, doc, start)),
+        Some(Token::None) => Ok(Expr::from_parse(ExprKind::None, doc, start)),
+        Some(Token::While) => Ok(Expr::from_parse(while_flow(lex)?, doc, start)),
         Some(Token::Return) => Ok(Expr::from_parse(Return(box_next(lex)?), doc, start)),
         Some(Token::Str(d)) => Ok(Expr::from_parse(StrLit(d), doc, start)),
         Some(Token::Char(d)) => Ok(Expr::from_parse(CharLit(d), doc, start)),
         Some(Token::Float(d)) => Ok(Expr::from_parse(FloatLit(d), doc, start)),
         Some(Token::Int(d)) => Ok(Expr::from_parse(IntLit(d), doc, start)),
-        Some(Token::Doc(string)) => next(lex, buf, Some(string), is_topmost),
+        Some(Token::Doc(d)) => next(lex, buf, Some(d), is_topmost),
         Some(Token::Fun) => Ok(Expr::from_parse(subprogram_flow(lex)?, doc, start)),
-        Some(Token::Path(_path)) => todo!("pathing"),
+        Some(Token::Path(_d)) => todo!("pathing"),
         Some(Token::Error) => Err(ParseStop::UnknownToken(lex.slice().to_string())),
         Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
         None => Err(match is_topmost {
@@ -129,16 +130,11 @@ fn op_flow(lex: &mut Lexer<Token>, buf: &mut Option<Expr>, kind: OpKind) -> Resu
 
 /// Flow for `let` grammar
 fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
-    let (path, mutable) = match lex.next().ok_or(ParseStop::UnexpectedEof)? {
-        Token::Path(path) => Ok((path, false)),
-        Token::Mut => {
-            if let Token::Path(path) = lex.next().ok_or(ParseStop::UnexpectedEof)? {
-                Ok((path, true))
-            } else {
-                Err(ParseStop::UnexpectedToken(lex.slice().to_string()))
-            }
-        }
-        _ => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
+    let (path, mutable) = match lex.next() {
+        Some(Token::Path(path) )=> Ok((path, false)),
+        Some(Token::Mut) if let Token::Path(path) = lex.next().ok_or(ParseStop::UnexpectedEof)? =>  Ok((path, true)),
+        Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
+        None => Err(ParseStop::UnexpectedEof)
     }?;
 
     ensure(lex, Token::Equals)?;
@@ -150,10 +146,22 @@ fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
     })
 }
 
+/// Flow for `while` loops
+fn while_flow(lex: &mut Lexer<Token>) -> Result<While, ParseStop> {
+    Ok(While {
+        condition: box_next(lex)?,
+        body: {
+            ensure(lex, Token::BraceLeft)?;
+            get_body(lex)?
+        },
+    })
+}
+
+/// Flow for subprograms, i.e. functions and methods
 fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
     let path = match lex.next() {
         Some(Token::Path(path)) => Ok(path),
-        Some(_) => Err(ParseStop::UnknownToken(lex.slice().to_string())),
+        Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
         None => Err(ParseStop::UnexpectedEof),
     }?;
 
@@ -174,6 +182,15 @@ fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
 
     ensure(lex, Token::BraceLeft)?;
 
+    Ok(Function {
+        path,
+        args,
+        body: get_body(lex)?,
+    })
+}
+
+/// Gets body inside of two braces, this consumes the last `}` brace
+fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
     let mut body = vec![];
 
     loop {
@@ -184,7 +201,7 @@ fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
         }
     }
 
-    Ok(Function { path, args, body })
+    Ok(body)
 }
 
 // /// Gets path from next [Lexer] token or errors
@@ -219,6 +236,131 @@ mod tests {
     // TODO: boxed expressions
     // TODO: order of operations
 
+    /// Shortcut for parsing next
+    fn nparse(input: impl AsRef<str>) -> Expr {
+        next(&mut Token::lexer(input.as_ref()), &mut None, None, true).unwrap()
+    }
+
+    #[test]
+    fn while_loops() {
+        assert_eq!(
+            nparse("while true {}"),
+            Expr {
+                kind: While {
+                    condition: Box::new(Expr {
+                        kind: BoolLit(true).into(),
+                        doc: None,
+                        start: 6
+                    }),
+                    body: vec![]
+                }
+                .into(),
+                doc: None,
+                start: 0
+            }
+        );
+        assert_eq!(
+            nparse("while true { none }"),
+            Expr {
+                kind: While {
+                    condition: Box::new(Expr {
+                        kind: BoolLit(true).into(),
+                        doc: None,
+                        start: 6
+                    }),
+                    body: vec![Expr {
+                        kind: ExprKind::None,
+                        doc: None,
+                        start: 13
+                    }]
+                }
+                .into(),
+                doc: None,
+                start: 0
+            }
+        );
+        assert_eq!(
+            nparse("while true { while true { none none } none }"),
+            Expr {
+                kind: While {
+                    condition: Box::new(Expr {
+                        kind: BoolLit(true).into(),
+                        doc: None,
+                        start: 6
+                    }),
+                    body: vec![
+                        Expr {
+                            kind: While {
+                                condition: Box::new(Expr {
+                                    kind: BoolLit(true).into(),
+                                    doc: None,
+                                    start: 19
+                                }),
+                                body: vec![
+                                    Expr {
+                                        kind: ExprKind::None,
+                                        doc: None,
+                                        start: 26
+                                    },
+                                    Expr {
+                                        kind: ExprKind::None,
+                                        doc: None,
+                                        start: 31
+                                    }
+                                ]
+                            }
+                            .into(),
+                            doc: None,
+                            start: 13
+                        },
+                        Expr {
+                            kind: ExprKind::None,
+                            doc: None,
+                            start: 38
+                        }
+                    ]
+                }
+                .into(),
+                doc: None,
+                start: 0
+            }
+        );
+    }
+
+    #[test]
+    fn none() {
+        assert_eq!(
+            nparse("none"),
+            Expr {
+                kind: ExprKind::None,
+                doc: None,
+                start: 0
+            }
+        );
+        assert_eq!(
+            next(
+                &mut Token::lexer("let mynone = none"),
+                &mut None,
+                None,
+                true
+            )
+            .unwrap(),
+            Expr {
+                kind: ExprKind::Let(Let {
+                    mutable: false,
+                    path: Path::new("mynone"),
+                    expr: Box::new(Expr {
+                        kind: ExprKind::None,
+                        doc: None,
+                        start: 13
+                    })
+                }),
+                doc: None,
+                start: 0
+            }
+        );
+    }
+
     #[test]
     fn lets() {
         assert_eq!(
@@ -226,11 +368,49 @@ mod tests {
             Expr {
                 kind: ExprKind::Let(Let {
                     mutable: false,
-                    path: Path::new("x".to_string()),
+                    path: Path::new("x"),
                     expr: Box::new(Expr {
-                        kind: ExprKind::IntLit(IntLit(5)),
+                        kind: IntLit(5).into(),
                         doc: None,
                         start: 8
+                    })
+                }),
+                doc: None,
+                start: 0
+            }
+        );
+        assert_eq!(
+            next(&mut Token::lexer("let mut x = 5"), &mut None, None, true).unwrap(),
+            Expr {
+                kind: ExprKind::Let(Let {
+                    mutable: true,
+                    path: Path::new("x"),
+                    expr: Box::new(Expr {
+                        kind: IntLit(5).into(),
+                        doc: None,
+                        start: 12
+                    })
+                }),
+                doc: None,
+                start: 0
+            }
+        );
+        assert_eq!(
+            next(
+                &mut Token::lexer(r#"let mut blah = "mut""#),
+                &mut None,
+                None,
+                true
+            )
+            .unwrap(),
+            Expr {
+                kind: ExprKind::Let(Let {
+                    mutable: true,
+                    path: Path::new("blah"),
+                    expr: Box::new(Expr {
+                        kind: StrLit("mut".into()).into(),
+                        doc: None,
+                        start: 15
                     })
                 }),
                 doc: None,

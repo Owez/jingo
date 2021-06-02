@@ -50,6 +50,7 @@ pub enum ExprKind {
     StrLit(StrLit),
     CharLit(CharLit),
     BoolLit(BoolLit),
+    None,
 }
 
 /// Right-associative not symbol

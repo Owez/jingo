@@ -62,14 +62,12 @@ pub enum Token {
     None,
     #[token("class")]
     Class,
-    #[token("loop")]
-    Loop,
     #[token("while")]
     While,
     #[token("return")]
     Return,
-    #[token("this")]
-    This,
+    #[token("self")]
+    SelfRef,
     #[token("let")]
     Let,
     #[token("mut")]
@@ -78,7 +76,7 @@ pub enum Token {
     Fun,
 
     // literals
-    #[regex(r#"".*""#, get_str)]
+    #[regex(r#""(\\"|[^"])*""#, get_str)]
     Str(String),
     #[regex(r"'(\\t|\\r|\\n|\\'|[^'])'", get_char)]
     Char(char),
@@ -113,10 +111,6 @@ fn get_char(lex: &mut Lexer<Token>) -> char {
 
 fn get_float(lex: &mut Lexer<Token>) -> Option<f64> {
     lex.slice().parse().ok()
-}
-
-fn get_id(lex: &mut Lexer<Token>) -> Id {
-    lex.slice().into()
 }
 
 fn get_path(lex: &mut Lexer<Token>) -> Path {

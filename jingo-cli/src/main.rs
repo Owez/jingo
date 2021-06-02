@@ -1,6 +1,7 @@
 //! CLI frontend for the [Jingo](https://github.com/owez/jingo) language
 
 #![deny(unsafe_code)]
+#![deny(warnings)]
 
 mod file_pos;
 mod subcommand;
