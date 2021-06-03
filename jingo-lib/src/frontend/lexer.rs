@@ -76,7 +76,7 @@ pub enum Token {
     Fun,
 
     // literals
-    #[regex(r#""(\\"|[^"])*""#, get_str)]
+    #[regex(r#"((?!"\\")"(\\"|[^"\n])*")*"#, get_str)]
     Str(String),
     #[regex(r"'(\\t|\\r|\\n|\\'|[^'])'", get_char)]
     Char(char),
