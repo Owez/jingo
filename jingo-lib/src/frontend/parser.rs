@@ -23,6 +23,9 @@ pub enum ParseStop {
     /// File ended unexpectedly
     UnexpectedEof,
 
+    /// Multiple expressions where given where a single expression should be
+    MultipleExpressions,
+
     //---------//
     // special //
     //---------//
@@ -39,6 +42,10 @@ impl fmt::Display for ParseStop {
                 write!(f, "Operation was found with no lefthand expression")
             }
             ParseStop::UnexpectedEof => write!(f, "File ended unexpectedly"),
+            ParseStop::MultipleExpressions => write!(
+                f,
+                "Multiple expressions where given where a single expression should be"
+            ),
             ParseStop::FileEnded => {
                 write!(f, "File ended expectedly, please report this as a bug!")
             }
@@ -149,11 +156,8 @@ fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
 /// Flow for `while` loops
 fn while_flow(lex: &mut Lexer<Token>) -> Result<While, ParseStop> {
     Ok(While {
-        condition: box_next(lex)?,
-        body: {
-            ensure(lex, Token::BraceLeft)?;
-            get_body(lex)?
-        },
+        condition: Box::new(get_condition(lex)?),
+        body: get_body(lex)?,
     })
 }
 
@@ -189,7 +193,7 @@ fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
     })
 }
 
-/// Gets body inside of two braces, this consumes the last `}` brace, based upon the [launch] function
+/// Gets condition which are multiple expression ending with a stray [Token::BraceRight] this consumes, based upon the [launch] function
 fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
     let mut buf = None;
     let mut output = vec![];
@@ -205,8 +209,8 @@ fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
 
                 buf = Some(expr);
             }
-            Err(ParseStop::UnexpectedToken(slice)) if &slice == "}" => break,
-            Err(unknown) => return Err(unknown.into()),
+            Err(ParseStop::UnexpectedToken(d)) if &d == "}" => break,
+            Err(unknown) => return Err(unknown),
         }
     }
 
@@ -218,13 +222,21 @@ fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
     Ok(output)
 }
 
-// /// Gets path from next [Lexer] token or errors
-// fn get_path(lex: &mut Lexer<Token>) -> Result<Path, ParseStop> {
-//     match lex.next() {
-//         Some(Token::Path(path)) => Ok(path),
-//         unknown => Err(unknown.into()),
-//     }
-// }
+/// Gets condition which is a single expression ending with a stray [Token::BraceLeft] this consumes
+fn get_condition(lex: &mut Lexer<Token>) -> Result<Expr, ParseStop> {
+    let mut buf = None;
+
+    loop {
+        match next(lex, &mut buf, None, false) {
+            Ok(expr) if buf.is_none() => buf = Some(expr),
+            Ok(_) => return Err(ParseStop::MultipleExpressions),
+            Err(ParseStop::UnexpectedToken(d)) if buf.is_some() && &d == "{" => {
+                return Ok(buf.unwrap())
+            }
+            Err(unknown) => return Err(unknown),
+        }
+    }
+}
 
 /// Gets next expression without passing a previous `buf` of `doc` and returns a
 /// [Box], used as a shortcut for sequential parsing
@@ -294,6 +306,39 @@ mod tests {
             }
         );
         assert_eq!(
+            nparse("while 1+2 { none }"),
+            Expr {
+                kind: While {
+                    condition: Box::new(Expr {
+                        kind: Op {
+                            left: Box::new(Expr {
+                                kind: IntLit(1).into(),
+                                doc: None,
+                                start: 6
+                            }),
+                            right: Box::new(Expr {
+                                kind: IntLit(2).into(),
+                                doc: None,
+                                start: 8
+                            }),
+                            kind: OpKind::Add
+                        }
+                        .into(),
+                        doc: None,
+                        start: 7
+                    }),
+                    body: vec![Expr {
+                        kind: ExprKind::None,
+                        doc: None,
+                        start: 12
+                    }]
+                }
+                .into(),
+                doc: None,
+                start: 0
+            }
+        );
+        assert_eq!(
             nparse("while true { while true { none none } none }"),
             Expr {
                 kind: While {
@@ -352,13 +397,7 @@ mod tests {
             }
         );
         assert_eq!(
-            next(
-                &mut Token::lexer("let mynone = none"),
-                &mut None,
-                None,
-                true
-            )
-            .unwrap(),
+            nparse("let mynone = none"),
             Expr {
                 kind: ExprKind::Let(Let {
                     mutable: false,
@@ -378,7 +417,7 @@ mod tests {
     #[test]
     fn lets() {
         assert_eq!(
-            next(&mut Token::lexer("let x = 5"), &mut None, None, true).unwrap(),
+            nparse("let x = 5"),
             Expr {
                 kind: ExprKind::Let(Let {
                     mutable: false,
@@ -394,7 +433,7 @@ mod tests {
             }
         );
         assert_eq!(
-            next(&mut Token::lexer("let mut x = 5"), &mut None, None, true).unwrap(),
+            nparse("let mut x = 5"),
             Expr {
                 kind: ExprKind::Let(Let {
                     mutable: true,
@@ -410,13 +449,7 @@ mod tests {
             }
         );
         assert_eq!(
-            next(
-                &mut Token::lexer(r#"let mut blah = "mut""#),
-                &mut None,
-                None,
-                true
-            )
-            .unwrap(),
+            nparse(r#"let mut blah = "mut""#),
             Expr {
                 kind: ExprKind::Let(Let {
                     mutable: true,
