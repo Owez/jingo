@@ -76,7 +76,7 @@ pub enum Token {
     Fun,
 
     // literals
-    #[regex(r#"((?!"\\")"(\\"|[^"\n])*")*"#, get_str)]
+    #[regex(r#""(\\"|[^\n"])*""#, get_str)]
     Str(String),
     #[regex(r"'(\\t|\\r|\\n|\\'|[^'])'", get_char)]
     Char(char),
@@ -97,9 +97,11 @@ pub enum Token {
     Error,
 }
 
-fn get_str(lex: &mut Lexer<Token>) -> String {
+fn get_str(lex: &mut Lexer<Token>) -> Option<String> {
     let slice = lex.slice();
-    slice[1..slice.len() - 1].to_string()
+    let found = &slice[1..slice.len() - 1];
+
+    (found != "\\").then_some(found.to_string())
 }
 
 fn get_char(lex: &mut Lexer<Token>) -> char {
@@ -202,5 +204,11 @@ mod tests {
                 .unwrap(),
             Token::Doc("hi there ---\npretty cool eh?".to_string())
         );
+    }
+
+    #[test]
+    fn strings() {
+        assert_eq!(Token::lexer("\"hello there\"").next().unwrap(),Token::Str("hello there".to_string()));
+        assert_eq!(Token::lexer("\"\\\"").next().unwrap(),Token::Error);
     }
 }

@@ -482,7 +482,6 @@ mod tests {
 
     #[test]
     fn pathing() {
-        // basic tests are in lexer
         assert_eq!(
             launch(&mut Token::lexer("hello_there.five.ten.fifteen")).unwrap(),
             vec![Expr {
@@ -502,6 +501,39 @@ mod tests {
                 doc: None,
                 start: 0
             }]
+        );
+    }
+
+    #[test]
+    fn bodies() {
+        assert_eq!(
+            get_body(&mut Token::lexer("\"hello\"}")),
+            Ok(vec![Expr {
+                kind: StrLit("hello".to_string()).into(),
+                doc: None,
+                start: 0
+            }])
+        );
+        assert_eq!(
+            get_body(&mut Token::lexer("56    + 3298}")),
+            Ok(vec![Expr {
+                kind: Op {
+                    left: Box::new(Expr {
+                        kind: IntLit(56).into(),
+                        doc: None,
+                        start: 0
+                    }),
+                    right: Box::new(Expr {
+                        kind: IntLit(3298).into(),
+                        doc: None,
+                        start: 0
+                    }),
+                    kind: OpKind::Add
+                }
+                .into(),
+                doc: None,
+                start: 0
+            }])
         );
     }
 
