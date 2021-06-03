@@ -189,19 +189,33 @@ fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
     })
 }
 
-/// Gets body inside of two braces, this consumes the last `}` brace
+/// Gets body inside of two braces, this consumes the last `}` brace, based upon the [launch] function
 fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
-    let mut body = vec![];
+    let mut buf = None;
+    let mut output = vec![];
 
     loop {
-        match next(lex, &mut None, None, false) {
-            Ok(expr) => body.push(expr),
-            Err(ParseStop::UnexpectedToken(slice)) if slice == String::from("}") => break,
-            Err(err) => return Err(err),
+        let buf_was_some = buf.is_some();
+
+        match next(lex, &mut buf, None, true) {
+            Ok(expr) => {
+                if buf_was_some && buf.is_some() {
+                    output.push(buf.take().unwrap());
+                }
+
+                buf = Some(expr);
+            }
+            Err(ParseStop::UnexpectedToken(slice)) if &slice == "}" => break,
+            Err(unknown) => return Err(unknown.into()),
         }
     }
 
-    Ok(body)
+    match buf {
+        Some(expr) => output.push(expr),
+        None => (),
+    }
+
+    Ok(output)
 }
 
 // /// Gets path from next [Lexer] token or errors
@@ -526,13 +540,13 @@ mod tests {
                     right: Box::new(Expr {
                         kind: IntLit(3298).into(),
                         doc: None,
-                        start: 0
+                        start: 8
                     }),
                     kind: OpKind::Add
                 }
                 .into(),
                 doc: None,
-                start: 0
+                start: 6
             }])
         );
     }
@@ -583,18 +597,18 @@ mod tests {
                 left: Box::new(Expr {
                     kind: IntLit(69).into(),
                     doc: None,
-                    start: 19,
+                    start: 20,
                 }),
                 right: Box::new(Expr {
                     kind: IntLit(2).into(),
                     doc: None,
-                    start: 24,
+                    start: 25,
                 }),
                 kind: OpKind::Add,
             }
             .into(),
             doc: None,
-            start: 19,
+            start: 23,
         };
 
         assert_eq!(

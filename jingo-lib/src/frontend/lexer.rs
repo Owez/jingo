@@ -105,6 +105,7 @@ fn get_str(lex: &mut Lexer<Token>) -> Option<String> {
 }
 
 fn get_char(lex: &mut Lexer<Token>) -> char {
+    // TODO: fix
     let mut chars = lex.slice().chars();
     chars.next();
     chars.next_back();
@@ -208,7 +209,10 @@ mod tests {
 
     #[test]
     fn strings() {
-        assert_eq!(Token::lexer("\"hello there\"").next().unwrap(),Token::Str("hello there".to_string()));
-        assert_eq!(Token::lexer("\"\\\"").next().unwrap(),Token::Error);
+        assert_eq!(
+            Token::lexer("\"hello there\"").next().unwrap(),
+            Token::Str("hello there".to_string())
+        );
+        assert_eq!(Token::lexer("\"\\\"").next().unwrap(), Token::Error);
     }
 }
