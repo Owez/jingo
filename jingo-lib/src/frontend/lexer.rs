@@ -119,7 +119,7 @@ fn get_char(lex: &mut Lexer<Token>) -> Option<u32> {
             '0' => Some('\0' as u32),
             'x' => {
                 chars.next_back();
-                Some(hex_to_u32(chars))
+                hex_to_u32(chars, 8)
             } // hex
             _ => panic!(), // regex prevents
         },
@@ -128,14 +128,18 @@ fn get_char(lex: &mut Lexer<Token>) -> Option<u32> {
 }
 
 /// Converts character iterator of hex digits into a [u32] value
-fn hex_to_u32(chars: Chars) -> u32 {
+fn hex_to_u32(chars: Chars, limit: usize) -> Option<u32> {
     let mut res = 0;
 
     for (ind, c) in chars.rev().enumerate() {
+        if ind == limit {
+            return None;
+        }
+
         res += c.to_digit(16).unwrap() * 16u32.pow(ind as u32)
     }
 
-    res
+    Some(res)
 }
 
 fn get_float(lex: &mut Lexer<Token>) -> Option<f64> {
@@ -244,20 +248,25 @@ mod tests {
 
     #[test]
     fn char_hex() {
-        assert_eq!(hex_to_u32("F".chars()), 15);
-        assert_eq!(hex_to_u32("A".chars()), 10);
-        assert_eq!(hex_to_u32("0".chars()), 0);
-        assert_eq!(hex_to_u32("FF".chars()), 255);
-        assert_eq!(hex_to_u32("A039FBCF".chars()), 2688154575);
-        assert_eq!(hex_to_u32("fe10ebca".chars()), 4262521802);
+        assert_eq!(hex_to_u32("F".chars(), 1).unwrap(), 15);
+        assert_eq!(hex_to_u32("A".chars(), 1).unwrap(), 10);
+        assert_eq!(hex_to_u32("0".chars(), 1).unwrap(), 0);
+        assert_eq!(hex_to_u32("FF".chars(), 8).unwrap(), 255);
+        assert_eq!(hex_to_u32("A039FBCF".chars(), 8).unwrap(), 2688154575);
+        assert_eq!(hex_to_u32("fe10ebca".chars(), 8).unwrap(), 4262521802);
+        assert_eq!(hex_to_u32("FFF".chars(), 3), Some(4095));
+        assert_eq!(hex_to_u32("FFFF".chars(), 3), None);
+        assert_eq!(hex_to_u32("0000".chars(), 3), None);
+        assert_eq!(hex_to_u32("FFFFF".chars(), 3), None);
+        assert_eq!(hex_to_u32("00000".chars(), 3), None);
 
-        let mut lex = Token::lexer(r#"'\xF' '\xA' '\0' '\xFF' '\xA039FBCF' '\xfe10ebca'"#);
+        let mut lex = Token::lexer(r#"'\xF' '\xA' '\0' '\xFF' '\xA0CF' '\xfe10'"#);
 
         assert_eq!(lex.next().unwrap(), Token::Char(15));
         assert_eq!(lex.next().unwrap(), Token::Char(10));
         assert_eq!(lex.next().unwrap(), Token::Char(0));
         assert_eq!(lex.next().unwrap(), Token::Char(255));
-        assert_eq!(lex.next().unwrap(), Token::Char(2688154575));
-        assert_eq!(lex.next().unwrap(), Token::Char(4262521802));
+        assert_eq!(lex.next().unwrap(), Token::Char(41167));
+        assert_eq!(lex.next().unwrap(), Token::Char(65040));
     }
 }
