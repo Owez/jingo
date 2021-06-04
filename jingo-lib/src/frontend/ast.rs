@@ -360,7 +360,7 @@ impl From<StrLit> for ExprKind {
 
 /// Char literal used for defining raw chars
 #[derive(Debug, Clone, PartialEq)]
-pub struct CharLit(pub char);
+pub struct CharLit(pub u32);
 
 impl From<CharLit> for ExprKind {
     fn from(kind: CharLit) -> Self {

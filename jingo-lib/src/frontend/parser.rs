@@ -44,7 +44,7 @@ impl fmt::Display for ParseStop {
             ParseStop::UnexpectedEof => write!(f, "File ended unexpectedly"),
             ParseStop::MultipleExpressions => write!(
                 f,
-                "Multiple expressions where given where a single expression should be"
+                "Multiple expressions given where a single expression should be"
             ),
             ParseStop::FileEnded => {
                 write!(f, "File ended expectedly, please report this as a bug!")
@@ -229,11 +229,11 @@ fn get_condition(lex: &mut Lexer<Token>) -> Result<Expr, ParseStop> {
     loop {
         match next(lex, &mut buf, None, false) {
             Ok(expr) if buf.is_none() => buf = Some(expr),
-            Ok(_) => return Err(ParseStop::MultipleExpressions),
+            Ok(_) => break Err(ParseStop::MultipleExpressions),
             Err(ParseStop::UnexpectedToken(d)) if buf.is_some() && &d == "{" => {
-                return Ok(buf.unwrap())
+                break Ok(buf.unwrap())
             }
-            Err(unknown) => return Err(unknown),
+            Err(unknown) => break Err(unknown),
         }
     }
 }
@@ -613,7 +613,7 @@ mod tests {
                             start: 13
                         },
                         Expr {
-                            kind: ExprKind::CharLit(CharLit('c')),
+                            kind: ExprKind::CharLit(CharLit('c' as u32)),
                             doc: None,
                             start: 15
                         }

@@ -3,6 +3,7 @@
 
 use super::ast::{Id, Path};
 use logos::{Lexer, Logos};
+use std::str::Chars;
 
 /// Lexed token from [logos], encompassing all possible tokens
 #[derive(Logos, Debug, PartialEq)]
@@ -78,8 +79,8 @@ pub enum Token {
     // literals
     #[regex(r#""(\\"|[^\n"])*""#, get_str)]
     Str(String),
-    #[regex(r"'(\\t|\\r|\\n|\\'|[^'])'", get_char)]
-    Char(char),
+    #[regex(r"'([^'\n]|\\(\\|n|r|t|b|f|v|0|x[0-9a-fA-F]+))'", get_char)]
+    Char(u32),
     #[regex(r"[0-9]*\.[0-9]+", get_float)]
     Float(f64),
     #[regex(r"[0-9]+", get_int)]
@@ -104,12 +105,37 @@ fn get_str(lex: &mut Lexer<Token>) -> Option<String> {
     (found != "\\").then_some(found.to_string())
 }
 
-fn get_char(lex: &mut Lexer<Token>) -> char {
-    // TODO: fix
+fn get_char(lex: &mut Lexer<Token>) -> Option<u32> {
     let mut chars = lex.slice().chars();
     chars.next();
-    chars.next_back();
-    chars.as_str().parse().unwrap()
+
+    match chars.next().unwrap() {
+        '\\' => match chars.next().unwrap() {
+            'n' => Some('\n' as u32),   // newline
+            'r' => Some('\r' as u32),   // carriage return
+            't' => Some('\t' as u32),   // tab
+            'b' => Some('\x7f' as u32), // backspace
+            'f' => Some('\x0C' as u32), // form feed
+            '0' => Some('\0' as u32),
+            'x' => {
+                chars.next_back();
+                Some(hex_to_u32(chars))
+            } // hex
+            _ => panic!(), // regex prevents
+        },
+        c => Some(c as u32), // normal
+    }
+}
+
+/// Converts character iterator of hex digits into a [u32] value
+fn hex_to_u32(chars: Chars) -> u32 {
+    let mut res = 0;
+
+    for (ind, c) in chars.rev().enumerate() {
+        res += c.to_digit(16).unwrap() * 16u32.pow(ind as u32)
+    }
+
+    res
 }
 
 fn get_float(lex: &mut Lexer<Token>) -> Option<f64> {
@@ -148,9 +174,9 @@ mod tests {
     fn chars() {
         let mut lex = Token::lexer("'a' 'b' '\\n'");
 
-        assert_eq!(lex.next().unwrap(), Token::Char('a'));
-        assert_eq!(lex.next().unwrap(), Token::Char('b'));
-        assert_eq!(lex.next().unwrap(), Token::Char('\n'));
+        assert_eq!(lex.next().unwrap(), Token::Char('a' as u32));
+        assert_eq!(lex.next().unwrap(), Token::Char('b' as u32));
+        assert_eq!(lex.next().unwrap(), Token::Char('\n' as u32));
     }
 
     #[test]
@@ -214,5 +240,24 @@ mod tests {
             Token::Str("hello there".to_string())
         );
         assert_eq!(Token::lexer("\"\\\"").next().unwrap(), Token::Error);
+    }
+
+    #[test]
+    fn char_hex() {
+        assert_eq!(hex_to_u32("F".chars()), 15);
+        assert_eq!(hex_to_u32("A".chars()), 10);
+        assert_eq!(hex_to_u32("0".chars()), 0);
+        assert_eq!(hex_to_u32("FF".chars()), 255);
+        assert_eq!(hex_to_u32("A039FBCF".chars()), 2688154575);
+        assert_eq!(hex_to_u32("fe10ebca".chars()), 4262521802);
+
+        let mut lex = Token::lexer(r#"'\xF' '\xA' '\0' '\xFF' '\xA039FBCF' '\xfe10ebca'"#);
+
+        assert_eq!(lex.next().unwrap(), Token::Char(15));
+        assert_eq!(lex.next().unwrap(), Token::Char(10));
+        assert_eq!(lex.next().unwrap(), Token::Char(0));
+        assert_eq!(lex.next().unwrap(), Token::Char(255));
+        assert_eq!(lex.next().unwrap(), Token::Char(2688154575));
+        assert_eq!(lex.next().unwrap(), Token::Char(4262521802));
     }
 }
