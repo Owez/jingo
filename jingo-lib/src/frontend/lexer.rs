@@ -3,7 +3,6 @@
 
 use super::ast::{Id, Path};
 use logos::{Lexer, Logos};
-use std::str::Chars;
 
 /// Lexed token from [logos], encompassing all possible tokens
 #[derive(Logos, Debug, PartialEq)]
@@ -119,7 +118,7 @@ fn get_char(lex: &mut Lexer<Token>) -> Option<u32> {
             '0' => Some('\0' as u32),
             'x' => {
                 chars.next_back();
-                hex_to_u32(chars, 8)
+                hex_to_u32(chars.as_str(), 8)
             } // hex
             _ => panic!(), // regex prevents
         },
@@ -128,18 +127,8 @@ fn get_char(lex: &mut Lexer<Token>) -> Option<u32> {
 }
 
 /// Converts character iterator of hex digits into a [u32] value
-fn hex_to_u32(chars: Chars, limit: usize) -> Option<u32> {
-    let mut res = 0;
-
-    for (ind, c) in chars.rev().enumerate() {
-        if ind == limit {
-            return None;
-        }
-
-        res += c.to_digit(16).unwrap() * 16u32.pow(ind as u32)
-    }
-
-    Some(res)
+fn hex_to_u32(hex: &str, limit: usize) -> Option<u32> {
+    (hex.len() <= limit).then_some(u32::from_str_radix(hex, 16).unwrap())
 }
 
 fn get_float(lex: &mut Lexer<Token>) -> Option<f64> {
@@ -248,17 +237,17 @@ mod tests {
 
     #[test]
     fn char_hex() {
-        assert_eq!(hex_to_u32("F".chars(), 1).unwrap(), 15);
-        assert_eq!(hex_to_u32("A".chars(), 1).unwrap(), 10);
-        assert_eq!(hex_to_u32("0".chars(), 1).unwrap(), 0);
-        assert_eq!(hex_to_u32("FF".chars(), 8).unwrap(), 255);
-        assert_eq!(hex_to_u32("A039FBCF".chars(), 8).unwrap(), 2688154575);
-        assert_eq!(hex_to_u32("fe10ebca".chars(), 8).unwrap(), 4262521802);
-        assert_eq!(hex_to_u32("FFF".chars(), 3), Some(4095));
-        assert_eq!(hex_to_u32("FFFF".chars(), 3), None);
-        assert_eq!(hex_to_u32("0000".chars(), 3), None);
-        assert_eq!(hex_to_u32("FFFFF".chars(), 3), None);
-        assert_eq!(hex_to_u32("00000".chars(), 3), None);
+        assert_eq!(hex_to_u32("F", 1).unwrap(), 15);
+        assert_eq!(hex_to_u32("A", 1).unwrap(), 10);
+        assert_eq!(hex_to_u32("0", 1).unwrap(), 0);
+        assert_eq!(hex_to_u32("FF", 8).unwrap(), 255);
+        assert_eq!(hex_to_u32("A039FBCF", 8).unwrap(), 2688154575);
+        assert_eq!(hex_to_u32("fe10ebca", 8).unwrap(), 4262521802);
+        assert_eq!(hex_to_u32("FFF", 3), Some(4095));
+        assert_eq!(hex_to_u32("FFFF", 3), None);
+        assert_eq!(hex_to_u32("0000", 3), None);
+        assert_eq!(hex_to_u32("FFFFF", 3), None);
+        assert_eq!(hex_to_u32("00000", 3), None);
 
         let mut lex = Token::lexer(r#"'\xF' '\xA' '\0' '\xFF' '\xA0CF' '\xfe10'"#);
 
