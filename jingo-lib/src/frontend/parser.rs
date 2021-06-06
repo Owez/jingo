@@ -116,7 +116,6 @@ fn next(
         Some(Token::Class) => Ok(Expr::from_parse(class_flow(lex)?, doc, start)),
         Some(Token::While) => Ok(Expr::from_parse(while_flow(lex)?, doc, start)),
         Some(Token::Return) => Ok(Expr::from_parse(Return(box_next(lex)?), doc, start)),
-        Some(Token::SelfRef) => Ok(Expr::from_parse(ExprKind::SelfRef, doc, start)),
         Some(Token::Let) => Ok(Expr::from_parse(let_flow(lex)?, doc, start)),
         Some(Token::Str(d)) => Ok(Expr::from_parse(StrLit(d), doc, start)),
         Some(Token::Char(d)) => Ok(Expr::from_parse(CharLit(d), doc, start)),

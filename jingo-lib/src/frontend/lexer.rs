@@ -66,8 +66,6 @@ pub enum Token {
     While,
     #[token("return")]
     Return,
-    #[token("self")]
-    SelfRef,
     #[token("let")]
     Let,
     #[token("mut")]

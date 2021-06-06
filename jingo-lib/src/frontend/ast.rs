@@ -50,7 +50,6 @@ pub enum ExprKind {
     StrLit(StrLit),
     CharLit(CharLit),
     BoolLit(BoolLit),
-    SelfRef,
     None,
 }
 
@@ -160,7 +159,7 @@ pub struct Class {
     pub id: Id,
 
     /// Body of class, specially parsed further downstream
-    pub body: Vec<Expr>
+    pub body: Vec<Expr>,
 }
 
 impl From<Class> for ExprKind {
