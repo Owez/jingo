@@ -110,6 +110,7 @@ fn next(
             start,
         )),
         Some(Token::Exclaim) => Ok(Expr::from_parse(Not(box_next(lex)?), doc, start)),
+        Some(Token::If) => Ok(Expr::from_parse(if_flow(lex)?, doc, start)),
         Some(Token::True) => Ok(Expr::from_parse(BoolLit(true), doc, start)),
         Some(Token::False) => Ok(Expr::from_parse(BoolLit(false), doc, start)),
         Some(Token::None) => Ok(Expr::from_parse(ExprKind::None, doc, start)),
@@ -140,6 +141,28 @@ fn op_flow(lex: &mut Lexer<Token>, buf: &mut Option<Expr>, kind: OpKind) -> Resu
         right: box_next(lex)?,
         kind,
     })
+}
+
+
+/// Flow for `if` branching
+fn if_flow(lex: &mut Lexer<Token>) -> Result<If, ParseStop> { // TODO: utilise `buf` for scanning past } end safely and make separate else parse branch
+    let mut segments = vec![];
+    let mut default = None;
+
+    loop {
+        segments.push(IfSegment {condition:get_condition(lex)?, body: get_body(lex)? });
+
+        match lex.next() {
+            Some(Token::Else) => match lex.next() {
+                Some(Token::If) => continue,
+                Some(Token::BraceLeft) => break default = Some(get_body(lex)?),
+                Some(_) => return Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
+                None => return Err(ParseStop::UnexpectedEof)
+            },
+            Some(Token::)
+            None => return Err(ParseStop::UnexpectedEof)
+        }
+    }
 }
 
 /// Flow for `let` grammar
