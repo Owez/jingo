@@ -50,6 +50,7 @@ pub enum ExprKind {
     StrLit(StrLit),
     CharLit(CharLit),
     BoolLit(BoolLit),
+    SelfRef,
     None,
 }
 
@@ -154,7 +155,13 @@ impl From<Path> for ExprKind {
 
 /// Class definition
 #[derive(Debug, Clone, PartialEq)]
-pub struct Class(pub Id);
+pub struct Class {
+    /// Name of class
+    pub id: Id,
+
+    /// Body of class, specially parsed further downstream
+    pub body: Vec<Expr>
+}
 
 impl From<Class> for ExprKind {
     fn from(kind: Class) -> Self {

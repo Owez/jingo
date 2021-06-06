@@ -26,6 +26,9 @@ pub enum ParseStop {
     /// Multiple expressions where given where a single expression should be
     MultipleExpressions,
 
+    /// Class names need to be a single identifier, not a path
+    ClassNameIsPath,
+
     //---------//
     // special //
     //---------//
@@ -46,6 +49,9 @@ impl fmt::Display for ParseStop {
                 f,
                 "Multiple expressions given where a single expression should be"
             ),
+            ParseStop::ClassNameIsPath => {
+                write!(f, "Class name is a path and not a single identifier")
+            }
             ParseStop::FileEnded => {
                 write!(f, "File ended expectedly, please report this as a bug!")
             }
@@ -106,10 +112,12 @@ fn next(
         Some(Token::Exclaim) => Ok(Expr::from_parse(Not(box_next(lex)?), doc, start)),
         Some(Token::True) => Ok(Expr::from_parse(BoolLit(true), doc, start)),
         Some(Token::False) => Ok(Expr::from_parse(BoolLit(false), doc, start)),
-        Some(Token::Let) => Ok(Expr::from_parse(let_flow(lex)?, doc, start)),
         Some(Token::None) => Ok(Expr::from_parse(ExprKind::None, doc, start)),
+        Some(Token::Class) => Ok(Expr::from_parse(class_flow(lex)?, doc, start)),
         Some(Token::While) => Ok(Expr::from_parse(while_flow(lex)?, doc, start)),
         Some(Token::Return) => Ok(Expr::from_parse(Return(box_next(lex)?), doc, start)),
+        Some(Token::SelfRef) => Ok(Expr::from_parse(ExprKind::SelfRef, doc, start)),
+        Some(Token::Let) => Ok(Expr::from_parse(let_flow(lex)?, doc, start)),
         Some(Token::Str(d)) => Ok(Expr::from_parse(StrLit(d), doc, start)),
         Some(Token::Char(d)) => Ok(Expr::from_parse(CharLit(d), doc, start)),
         Some(Token::Float(d)) => Ok(Expr::from_parse(FloatLit(d), doc, start)),
@@ -151,6 +159,21 @@ fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
         mutable,
         expr: box_next(lex)?,
     })
+}
+
+/// Flow for `class` objects
+fn class_flow(lex: &mut Lexer<Token>) -> Result<Class, ParseStop> {
+    match lex.next() {
+        Some(Token::Path(path)) => Ok(Class {
+            id: path.to_id().ok_or(ParseStop::ClassNameIsPath)?,
+            body: {
+                ensure(lex, Token::BraceLeft)?;
+                get_body(lex)?
+            },
+        }),
+        Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
+        None => Err(ParseStop::UnexpectedEof),
+    }
 }
 
 /// Flow for `while` loops
@@ -656,6 +679,61 @@ mod tests {
                 doc: None,
                 start: 0
             }]
+        );
+    }
+
+    #[test]
+    fn classes() {
+        let y = Expr {
+            kind: ExprKind::Let(Let {
+                path: Path::new("y"),
+                mutable: true,
+                expr: Box::new(Expr {
+                    kind: IntLit(4).into(),
+                    doc: None,
+                    start: 62,
+                }),
+            }),
+            doc: None,
+            start: 50,
+        };
+
+        let other_thing = Expr {
+            kind: ExprKind::Function(Function {
+                path: Path::new("other_thing"),
+                args: vec![Id("x".to_string())],
+                body: vec![y],
+            }),
+            doc: None,
+            start: 29,
+        };
+
+        let x = Expr {
+            kind: ExprKind::Let(Let {
+                path: Path::new("x"),
+                mutable: false,
+                expr: Box::new(Expr {
+                    kind: IntLit(2).into(),
+                    doc: None,
+                    start: 27,
+                }),
+            }),
+            doc: None,
+            start: 19,
+        };
+
+        let hello_there = Expr {
+            kind: ExprKind::Class(Class {
+                id: Id("HelloThere".to_string()),
+                body: vec![x, other_thing],
+            }),
+            doc: None,
+            start: 0,
+        };
+
+        assert_eq!(
+            nparse("class HelloThere { let x = 2 fun other_thing(x) { let mut y = 4 } }"),
+            hello_there
         );
     }
 }
