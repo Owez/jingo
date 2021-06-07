@@ -1,7 +1,7 @@
 //! Lexer/scanner stage of parsing, the first main step to parse raw characters
 //! into further parsable tokens
 
-use super::ast::{Id, Path};
+use super::ast::{Id, OpKind, Path};
 use logos::{Lexer, Logos};
 
 /// Lexed token from [logos], encompassing all possible tokens
@@ -18,42 +18,26 @@ pub enum Token {
     BraceRight,
     #[token(",")]
     Comma,
-    #[token("*")]
-    Star,
-
-    // math-only symbols
-    #[token("+")]
-    Plus,
-    #[token("-")]
-    Minus,
-    #[token("/")]
-    FwdSlash,
-    #[token("=")]
-    Equals,
-    #[token("==")]
-    EqualsEquals,
     #[token("!")]
     Exclaim,
-    #[token("!=")]
-    ExclaimEquals,
-    #[token("<")]
-    Less,
-    #[token("<=")]
-    LessEquals,
-    #[token(">")]
-    Greater,
-    #[token(">=")]
-    GreaterEquals,
+    #[token("*")]
+    Star, // TODO: figure out pointers
+    #[token("-")]
+    Minus, // TODO: figure out negatives
+
+    // multi-char
+    #[token("=")]
+    Equals,
+    #[token("=>")]
+    FatArrow,
+
+    // operation symbols
+    #[regex(r"\+|/|==|!=|<|<=|>|>=|and|or", get_op)]
+    Op(OpKind),
 
     // keywords
-    #[token("if")]
-    If,
-    #[token("and")]
-    And,
-    #[token("or")]
-    Or,
-    #[token("else")]
-    Else,
+    #[token("match")]
+    Match,
     #[token("true")]
     True,
     #[token("false")]
@@ -93,6 +77,23 @@ pub enum Token {
     #[error]
     #[regex(r"[ \t\n\f]+|(--.*)", logos::skip)]
     Error,
+}
+
+fn get_op(lex: &mut Lexer<Token>) -> OpKind {
+    match lex.slice() {
+        "+" => OpKind::Plus,
+        "-" => OpKind::Sub,
+        "/" => OpKind::Div,
+        "==" => OpKind::EqEq,
+        "!=" => OpKind::NotEq,
+        "<" => OpKind::Less,
+        "<=" => OpKind::LessEq,
+        ">" => OpKind::Greater,
+        ">=" => OpKind::GreaterEq,
+        "and" => OpKind::And,
+        "or" => OpKind::Or,
+        _ => panic!() // regex prevents
+    }
 }
 
 fn get_str(lex: &mut Lexer<Token>) -> Option<String> {
@@ -173,10 +174,10 @@ mod tests {
     #[test]
     fn basic() {
         let mut lex = Token::lexer(
-            "if true { false 0 1 0.01 }\nmy_id.one.five2 -- comment!\n--- docstring\ntrue",
+            "match true { false 0 1 0.01 }\nmy_id.one.five2 -- comment!\n--- docstring\ntrue",
         );
 
-        assert_eq!(lex.next().unwrap(), Token::If);
+        assert_eq!(lex.next().unwrap(), Token::Match);
         assert_eq!(lex.next().unwrap(), Token::True);
         assert_eq!(lex.next().unwrap(), Token::BraceLeft);
         assert_eq!(lex.next().unwrap(), Token::False);

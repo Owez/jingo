@@ -39,7 +39,7 @@ pub enum ExprKind {
     Function(Function),
     Method(Method),
     FunctionCall(FunctionCall),
-    If(If),
+    Match(Match),
     While(While),
     Return(Return),
     Let(Let),
@@ -85,7 +85,7 @@ impl From<Op> for ExprKind {
 /// Binary operation variants, defining allowed types of a [Op] expression
 #[derive(Debug, Clone, PartialEq)]
 pub enum OpKind {
-    Add,
+    Plus,
     Sub,
     Mul,
     Div,
@@ -225,33 +225,32 @@ impl From<FunctionCall> for ExprKind {
     }
 }
 
-/// Basic single-argument matching as part of a broader [If]
+/// Segment of [Match] which contains a branch
 #[derive(Debug, Clone, PartialEq)]
-pub struct IfSegment {
-    /// Condition needed in order to fire
-    pub condition: Expr,
+pub struct MatchSegment {
+    /// Expression to match
+    pub condition: Box<Expr>,
 
-    /// Body of if
-    pub body: Vec<Expr>,
+    /// Multiple expression body to run if the match succeeds
+    pub expr: Box<Expr>,
 }
 
-/// Default value for [If] statement, typically known as `else`
+/// Match statement which is the primary conditional mechanism
 #[derive(Debug, Clone, PartialEq)]
-pub struct IfDefault(Vec<Expr>);
+pub struct Match {
+    /// Matching operation to use
+    pub kind: OpKind,
 
-/// Broader structure for basic single-argument matching
-#[derive(Debug, Clone, PartialEq)]
-pub struct If {
-    /// Arranged as `if, else if, else if`
-    pub segments: Vec<IfSegment>,
+    /// Initial condition to match to
+    pub condition: Box<Expr>,
 
-    /// Optional final `else`
-    pub default: Option<IfDefault>,
+    /// Each segment to try to equate and run
+    pub segments: Vec<MatchSegment>,
 }
 
-impl From<If> for ExprKind {
-    fn from(kind: If) -> Self {
-        ExprKind::If(kind)
+impl From<Match> for ExprKind {
+    fn from(kind: Match) -> Self {
+        ExprKind::Match(kind)
     }
 }
 

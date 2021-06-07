@@ -14,6 +14,9 @@ pub enum ParseStop {
     /// Unexpected token
     UnexpectedToken(String),
 
+    /// Unexpected token with a special case in the top level of parsing
+    UnexpectedTokenTop(String),
+
     /// Unknown token whilst lexing
     UnknownToken(String),
 
@@ -39,7 +42,9 @@ pub enum ParseStop {
 impl fmt::Display for ParseStop {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseStop::UnexpectedToken(slice) => write!(f, "Unexpected token '{}' found", slice),
+            ParseStop::UnexpectedToken(slice) | ParseStop::UnexpectedTokenTop(slice) => {
+                write!(f, "Unexpected token '{}' found", slice)
+            }
             ParseStop::UnknownToken(slice) => write!(f, "Unknown token '{}' found", slice),
             ParseStop::NoLeftExpr => {
                 write!(f, "Operation was found with no lefthand expression")
@@ -99,18 +104,9 @@ fn next(
     let start = lex.span().start;
 
     match cur {
-        Some(Token::Plus) => Ok(Expr::from_parse(
-            op_flow(lex, buf, OpKind::Add)?,
-            doc,
-            start,
-        )),
-        Some(Token::FwdSlash) => Ok(Expr::from_parse(
-            op_flow(lex, buf, OpKind::Div)?,
-            doc,
-            start,
-        )),
+        Some(Token::Op(kind)) => Ok(Expr::from_parse(op_flow(lex, buf, kind)?, doc, start)),
         Some(Token::Exclaim) => Ok(Expr::from_parse(Not(box_next(lex)?), doc, start)),
-        Some(Token::If) => Ok(Expr::from_parse(if_flow(lex)?, doc, start)),
+        Some(Token::Match) => Ok(Expr::from_parse(match_flow(lex)?, doc, start)),
         Some(Token::True) => Ok(Expr::from_parse(BoolLit(true), doc, start)),
         Some(Token::False) => Ok(Expr::from_parse(BoolLit(false), doc, start)),
         Some(Token::None) => Ok(Expr::from_parse(ExprKind::None, doc, start)),
@@ -126,10 +122,11 @@ fn next(
         Some(Token::Fun) => Ok(Expr::from_parse(subprogram_flow(lex)?, doc, start)),
         Some(Token::Path(_d)) => todo!("pathing"),
         Some(Token::Error) => Err(ParseStop::UnknownToken(lex.slice().to_string())),
-        Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
-        None => Err(match is_topmost {
-            true => ParseStop::FileEnded,
-            false => ParseStop::UnexpectedEof,
+        Some(_) => Err(ParseStop::UnexpectedTokenTop(lex.slice().to_string())),
+        None => Err(if is_topmost {
+            ParseStop::FileEnded
+        } else {
+            ParseStop::UnexpectedEof
         }),
     }
 }
@@ -143,24 +140,49 @@ fn op_flow(lex: &mut Lexer<Token>, buf: &mut Option<Expr>, kind: OpKind) -> Resu
     })
 }
 
-
-/// Flow for `if` branching
-fn if_flow(lex: &mut Lexer<Token>) -> Result<If, ParseStop> { // TODO: utilise `buf` for scanning past } end safely and make separate else parse branch
+/// Flow for `match` conditionals
+fn match_flow(lex: &mut Lexer<Token>) -> Result<Match, ParseStop> {
+    let kind = match lex.next() {
+        Some(Token::Op(op)) => Ok(op),
+        Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
+        None => Err(ParseStop::UnexpectedEof),
+    }?;
+    let condition = Box::new(get_condition(lex, "{")?);
     let mut segments = vec![];
-    let mut default = None;
 
     loop {
-        segments.push(IfSegment {condition:get_condition(lex)?, body: get_body(lex)? });
+        let (new_seg, should_break) = match_expr(lex)?;
 
-        match lex.next() {
-            Some(Token::Else) => match lex.next() {
-                Some(Token::If) => continue,
-                Some(Token::BraceLeft) => break default = Some(get_body(lex)?),
-                Some(_) => return Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
-                None => return Err(ParseStop::UnexpectedEof)
-            },
-            Some(Token::)
-            None => return Err(ParseStop::UnexpectedEof)
+        segments.push(new_seg);
+        if should_break {
+            break Ok(Match {
+                kind,
+                condition,
+                segments,
+            });
+        }
+    }
+}
+
+/// Matches a single expression part, i.e. `<expr> => <expr>` with the returned bool indicating if the match is over
+fn match_expr(lex: &mut Lexer<Token>) -> Result<(MatchSegment, bool), ParseStop> {
+    let condition = Box::new(get_condition(lex, "=>")?);
+    let mut buf = None;
+
+    loop {
+        match next(lex, &mut buf, None, false) {
+            Ok(expr) if buf.is_none() => buf = Some(expr),
+            Ok(_) => break Err(ParseStop::MultipleExpressions),
+            Err(ParseStop::UnexpectedTokenTop(d)) if buf.is_some() => {
+                let expr = Box::new(buf.take().unwrap());
+                let should_break = match d.as_str() {
+                    "," => false,
+                    "}" => true,
+                    _ => return Err(ParseStop::UnexpectedTokenTop(d)),
+                };
+                break Ok((MatchSegment { condition, expr }, should_break));
+            }
+            Err(unknown) => break Err(unknown),
         }
     }
 }
@@ -201,7 +223,7 @@ fn class_flow(lex: &mut Lexer<Token>) -> Result<Class, ParseStop> {
 /// Flow for `while` loops
 fn while_flow(lex: &mut Lexer<Token>) -> Result<While, ParseStop> {
     Ok(While {
-        condition: Box::new(get_condition(lex)?),
+        condition: Box::new(get_condition(lex, "{")?),
         body: get_body(lex)?,
     })
 }
@@ -254,7 +276,7 @@ fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
 
                 buf = Some(expr);
             }
-            Err(ParseStop::UnexpectedToken(d)) if &d == "}" => break,
+            Err(ParseStop::UnexpectedTokenTop(d)) if &d == "}" => break,
             Err(unknown) => return Err(unknown),
         }
     }
@@ -267,15 +289,15 @@ fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
     Ok(output)
 }
 
-/// Gets condition which is a single expression ending with a stray [Token::BraceLeft] this consumes
-fn get_condition(lex: &mut Lexer<Token>) -> Result<Expr, ParseStop> {
+/// Gets condition which is a single expression ending with a `stray` token slice this consumes
+fn get_condition(lex: &mut Lexer<Token>, stray: &str) -> Result<Expr, ParseStop> {
     let mut buf = None;
 
     loop {
         match next(lex, &mut buf, None, false) {
             Ok(expr) if buf.is_none() => buf = Some(expr),
             Ok(_) => break Err(ParseStop::MultipleExpressions),
-            Err(ParseStop::UnexpectedToken(d)) if buf.is_some() && &d == "{" => {
+            Err(ParseStop::UnexpectedTokenTop(d)) if buf.is_some() && &d == stray => {
                 break Ok(buf.unwrap())
             }
             Err(unknown) => break Err(unknown),
@@ -304,7 +326,6 @@ mod tests {
     use logos::Logos;
 
     // TODO: basic math
-    // TODO: boxed expressions
     // TODO: order of operations
 
     /// Shortcut for parsing next
@@ -366,7 +387,7 @@ mod tests {
                                 doc: None,
                                 start: 8
                             }),
-                            kind: OpKind::Add
+                            kind: OpKind::Plus
                         }
                         .into(),
                         doc: None,
@@ -543,7 +564,7 @@ mod tests {
                         doc: None,
                         start: 4
                     }),
-                    kind: OpKind::Add
+                    kind: OpKind::Plus
                 }),
                 doc: None,
                 start: 2
@@ -620,13 +641,23 @@ mod tests {
                         doc: None,
                         start: 8
                     }),
-                    kind: OpKind::Add
+                    kind: OpKind::Plus
                 }
                 .into(),
                 doc: None,
                 start: 6
             }])
         );
+    }
+
+    #[test]
+    fn multiple_expressions() {
+        todo!("multiple expressions testing")
+    }
+
+    #[test]
+    fn matching_basics() {
+        todo!("match statements")
     }
 
     #[test]
@@ -682,7 +713,7 @@ mod tests {
                     doc: None,
                     start: 25,
                 }),
-                kind: OpKind::Add,
+                kind: OpKind::Plus,
             }
             .into(),
             doc: None,
