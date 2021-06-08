@@ -600,7 +600,8 @@ mod tests {
             vec![Expr {
                 kind: LetCall::from(Path {
                     fields: vec!["hello_there".into(), "five".into(), "ten".into()],
-                    id: "fifteen".into()
+                    id: "fifteen".into(),
+                    affixed: false
                 })
                 .into(),
                 doc: None,

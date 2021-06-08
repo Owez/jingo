@@ -120,8 +120,14 @@ impl From<&str> for Id {
 /// Path to a node, with fields before separated with `.` towards a final identifier
 #[derive(Debug, Clone, PartialEq)]
 pub struct Path {
+    /// Fields before the final identifier
     pub fields: Vec<Id>,
+
+    /// Final identifier for path
     pub id: Id,
+
+    /// Determines if this path is affixed to the end of another, i.e. begins with a `.` char
+    pub affixed: bool,
 }
 
 impl Path {
@@ -129,16 +135,18 @@ impl Path {
         Self {
             fields: vec![],
             id: id.into().into(),
+            affixed: false,
         }
     }
 
+    /// Checks if this is a local path
     pub fn local(&self) -> bool {
-        self.fields.is_empty()
+        self.fields.is_empty() || !self.affixed
     }
 
-    /// Converts to the single [Path::id] provided there are no other fields
+    /// Converts to the single [Path::id] provided there are no other fields and its not affixed
     pub fn to_id(self) -> Option<Id> {
-        if self.fields.len() != 0 {
+        if self.fields.len() != 0 || self.affixed {
             None
         } else {
             Some(self.id)

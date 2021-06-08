@@ -58,7 +58,7 @@ pub enum Token {
     Fun,
 
     // literals
-    #[regex(r#""(\\"|[^\n"])*""#, get_str)]
+    #[regex(r#""(\\"|[^"])*""#, get_str)]
     Str(String),
     #[regex(r"'([^'\n]|\\(\\|n|r|t|b|f|v|0|x[0-9a-fA-F]+))'", get_char)]
     Char(u32),
@@ -66,7 +66,7 @@ pub enum Token {
     Float(f64),
     #[regex(r"[0-9]+", get_int)]
     Int(i64),
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*", get_path)]
+    #[regex(r"\.?[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*", get_path)]
     Path(Path),
 
     // misc
@@ -92,7 +92,7 @@ fn get_op(lex: &mut Lexer<Token>) -> OpKind {
         ">=" => OpKind::GreaterEq,
         "and" => OpKind::And,
         "or" => OpKind::Or,
-        _ => panic!() // regex prevents
+        _ => panic!(), // regex prevents
     }
 }
 
@@ -135,14 +135,22 @@ fn get_float(lex: &mut Lexer<Token>) -> Option<f64> {
 }
 
 fn get_path(lex: &mut Lexer<Token>) -> Path {
-    let mut fields: Vec<Id> = lex
-        .slice()
-        .split('.')
-        .map(|id| id.to_string().into())
-        .collect();
+    let mut sliced = lex.slice();
+    let affixed = if sliced.starts_with('.') {
+        sliced = &sliced[1..];
+        true
+    } else {
+        false
+    };
+
+    let mut fields: Vec<Id> = sliced.split('.').map(|id| id.to_string().into()).collect();
     let id = fields.pop().unwrap();
 
-    Path { fields, id }
+    Path {
+        fields,
+        id,
+        affixed,
+    }
 }
 
 fn get_int(lex: &mut Lexer<Token>) -> Option<i64> {
@@ -189,7 +197,8 @@ mod tests {
             lex.next().unwrap(),
             Token::Path(Path {
                 fields: vec!["my_id".into(), "one".into()],
-                id: "five2".into()
+                id: "five2".into(),
+                affixed: false
             })
         );
         assert_eq!(lex.next().unwrap(), Token::Doc("docstring".to_string()));
@@ -256,5 +265,68 @@ mod tests {
         assert_eq!(lex.next().unwrap(), Token::Char(255));
         assert_eq!(lex.next().unwrap(), Token::Char(41167));
         assert_eq!(lex.next().unwrap(), Token::Char(65040));
+    }
+
+    #[test]
+    fn pathing() {
+        // eq
+        assert_eq!(
+            Token::lexer("c.c").next().unwrap(),
+            Token::Path(Path {
+                id: "c".into(),
+                fields: vec!["c".into()],
+                affixed: false
+            })
+        );
+        assert_eq!(
+            Token::lexer("c").next().unwrap(),
+            Token::Path(Path {
+                id: "c".into(),
+                fields: vec![],
+                affixed: false
+            })
+        );
+        assert_eq!(
+            Token::lexer("a.b.c").next().unwrap(),
+            Token::Path(Path {
+                id: "c".into(),
+                fields: vec!["a".into(), "b".into()],
+                affixed: false
+            })
+        );
+        assert_eq!(
+            Token::lexer(".a.b.c").next().unwrap(),
+            Token::Path(Path {
+                id: "c".into(),
+                fields: vec!["a".into(), "b".into()],
+                affixed: true
+            })
+        );
+
+        // ne
+        assert_ne!(
+            Token::lexer("c..c").next().unwrap(),
+            Token::Path(Path {
+                id: "c".into(),
+                fields: vec!["c".into()],
+                affixed: false
+            })
+        );
+        assert_ne!(
+            Token::lexer("..c.c").next().unwrap(),
+            Token::Path(Path {
+                id: "c".into(),
+                fields: vec!["c".into()],
+                affixed: true
+            })
+        );
+        assert_ne!(
+            Token::lexer("..c..c").next().unwrap(),
+            Token::Path(Path {
+                id: "c".into(),
+                fields: vec!["c".into()],
+                affixed: true
+            })
+        );
     }
 }
