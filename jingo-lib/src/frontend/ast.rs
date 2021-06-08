@@ -236,7 +236,7 @@ impl From<FunctionCall> for ExprKind {
 /// Segment of [Match] which contains a branch
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchSegment {
-    /// Expression to match
+    /// Expression to match, if this is [None], it means this is the default
     pub condition: Box<Expr>,
 
     /// Multiple expression body to run if the match succeeds
@@ -254,6 +254,9 @@ pub struct Match {
 
     /// Each segment to try to equate and run
     pub segments: Vec<MatchSegment>,
+
+    /// Default expression to use if none matched
+    pub default: Option<Box<Expr>>
 }
 
 impl From<Match> for ExprKind {

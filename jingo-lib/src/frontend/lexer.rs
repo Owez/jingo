@@ -20,6 +20,8 @@ pub enum Token {
     Comma,
     #[token("!")]
     Exclaim,
+    #[token("_")]
+    Interpret,
     #[token("*")]
     Star, // TODO: figure out pointers
     #[token("-")]

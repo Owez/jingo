@@ -29,6 +29,9 @@ pub enum ParseStop {
     /// Multiple expressions where given where a single expression should be
     MultipleExpressions,
 
+    /// Multiple default cases where given for a match expression
+    MultipleMatchDefaults,
+
     /// Class names need to be a single identifier, not a path
     ClassNameIsPath,
 
@@ -53,6 +56,10 @@ impl fmt::Display for ParseStop {
             ParseStop::MultipleExpressions => write!(
                 f,
                 "Multiple expressions given where a single expression should be"
+            ),
+            ParseStop::MultipleMatchDefaults => write!(
+                f,
+                "Multiple default cases where given for a match expression"
             ),
             ParseStop::ClassNameIsPath => {
                 write!(f, "Class name is a path and not a single identifier")
@@ -149,24 +156,46 @@ fn match_flow(lex: &mut Lexer<Token>) -> Result<Match, ParseStop> {
     }?;
     let condition = Box::new(get_condition(lex, "{")?);
     let mut segments = vec![];
+    let mut default = None;
 
     loop {
-        let (new_seg, should_break) = match_expr(lex)?;
+        let (found_seg, should_break) = match_expr(lex)?;
 
-        segments.push(new_seg);
+        match found_seg {
+            MatchExprReturn::Default(expr) => match default {
+                Some(_) => break Err(ParseStop::MultipleMatchDefaults),
+                None => default = Some(expr),
+            },
+            MatchExprReturn::Segment(seg) => segments.push(seg),
+        }
+
         if should_break {
             break Ok(Match {
                 kind,
                 condition,
                 segments,
+                default,
             });
         }
     }
 }
 
-/// Matches a single expression part, i.e. `<expr> => <expr>` with the returned bool indicating if the match is over
-fn match_expr(lex: &mut Lexer<Token>) -> Result<(MatchSegment, bool), ParseStop> {
-    let condition = Box::new(get_condition(lex, "=>")?);
+/// Return for [match__expr], showing the two possible match cases
+enum MatchExprReturn {
+    Segment(MatchSegment),
+    Default(Box<Expr>),
+}
+
+/// Matches a single expression part, i.e. the `<expr> => <expr>` with the bool says if this is the last match segment in a statement
+fn match_expr(lex: &mut Lexer<Token>) -> Result<(MatchExprReturn, bool), ParseStop> {
+    let condition = match get_condition(lex, "=>") {
+        Ok(val) => Some(Box::new(val)),
+        Err(ParseStop::UnexpectedTokenTop(d)) if &d == "_" => {
+            ensure(lex, Token::FatArrow)?;
+            None
+        }
+        Err(unknown) => return Err(unknown),
+    };
     let mut buf = None;
 
     loop {
@@ -180,7 +209,17 @@ fn match_expr(lex: &mut Lexer<Token>) -> Result<(MatchSegment, bool), ParseStop>
                     "}" => true,
                     _ => return Err(ParseStop::UnexpectedTokenTop(d)),
                 };
-                break Ok((MatchSegment { condition, expr }, should_break));
+
+                break Ok((
+                    match condition {
+                        Some(val) => MatchExprReturn::Segment(MatchSegment {
+                            condition: val,
+                            expr,
+                        }),
+                        None => MatchExprReturn::Default(expr),
+                    },
+                    should_break,
+                ));
             }
             Err(unknown) => break Err(unknown),
         }
