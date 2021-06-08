@@ -10,22 +10,27 @@ A lightweight, high-level language designed for rapid prototyping
 A small class-based program demonstrating the basic syntax of this language:
 
 ```none
+print("Hello, world!")
+
 --- Small test class, helping to describe some features of Jingo
-class SomeClass
+class SomeClass {
+    --- Creates new [SomeClass] from `x` value
+    fun new(x) {
+        let self.x = x
+    }
 
---- Creates new [SomeClass] from `x` value
-fun SomeClass::new(x) {
-    self.x = x
+    --- Multiplies number on record with `y`
+    fun multiply(self, y) {
+        return self.x * y
+    }
 }
 
---- Multiplies number on record with `y`
-fun SomeClass.multiply(y) {
-    return self.x * y
-}
+let multiplied = SomeClass.new(3).multiply(25)
 
-if 1 + 2 == 3 {
-    var my_class = SomeClass::new(3)
-    my_class.multiply(2) -- will be 3 * 2 = 6
+match == multiplied + 10 {
+    10 => print("Huh? 10?"),
+    85 => print("This is the number!"),
+    _ => print("Default case")
 }
 ```
 
@@ -33,7 +38,7 @@ Jingo follows these rules for syntax:
 
 - No semi-colons or forced tabbing
 - Everything is an expression
-- OOP with insperation from lua
+- Match-orientated conditionals
 
 ## Installation
 
