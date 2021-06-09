@@ -111,6 +111,7 @@ fn next(
     let start = lex.span().start;
 
     match cur {
+        Some(Token::ParenLeft) => Ok(Expr::from_parse(get_body(lex, ")")?, doc, start)),
         Some(Token::Op(kind)) => Ok(Expr::from_parse(op_flow(lex, buf, kind)?, doc, start)),
         Some(Token::Exclaim) => Ok(Expr::from_parse(Not(box_next(lex)?), doc, start)),
         Some(Token::Match) => Ok(Expr::from_parse(match_flow(lex)?, doc, start)),
@@ -119,6 +120,7 @@ fn next(
         Some(Token::None) => Ok(Expr::from_parse(ExprKind::None, doc, start)),
         Some(Token::Class) => Ok(Expr::from_parse(class_flow(lex)?, doc, start)),
         Some(Token::While) => Ok(Expr::from_parse(while_flow(lex)?, doc, start)),
+        Some(Token::Break) => Ok(Expr::from_parse(ExprKind::Break, doc, start)),
         Some(Token::Return) => Ok(Expr::from_parse(Return(box_next(lex)?), doc, start)),
         Some(Token::Let) => Ok(Expr::from_parse(let_flow(lex)?, doc, start)),
         Some(Token::Str(d)) => Ok(Expr::from_parse(StrLit(d), doc, start)),
@@ -230,7 +232,7 @@ fn match_expr(lex: &mut Lexer<Token>) -> Result<(MatchExprReturn, bool), ParseSt
 fn let_flow(lex: &mut Lexer<Token>) -> Result<Let, ParseStop> {
     let (path, mutable) = match lex.next() {
         Some(Token::Path(path) )=> Ok((path, false)),
-        Some(Token::Mut) if let Token::Path(path) = lex.next().ok_or(ParseStop::UnexpectedEof)? =>  Ok((path, true)),
+        Some(Token::Mut) if let Token::Path(path) = lex.next().ok_or(ParseStop::UnexpectedEof)? => Ok((path, true)),
         Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
         None => Err(ParseStop::UnexpectedEof)
     }?;
@@ -251,7 +253,7 @@ fn class_flow(lex: &mut Lexer<Token>) -> Result<Class, ParseStop> {
             id: path.to_id().ok_or(ParseStop::ClassNameIsPath)?,
             body: {
                 ensure(lex, Token::BraceLeft)?;
-                get_body(lex)?
+                get_body(lex, "}")?
             },
         }),
         Some(_) => Err(ParseStop::UnexpectedToken(lex.slice().to_string())),
@@ -263,7 +265,7 @@ fn class_flow(lex: &mut Lexer<Token>) -> Result<Class, ParseStop> {
 fn while_flow(lex: &mut Lexer<Token>) -> Result<While, ParseStop> {
     Ok(While {
         condition: Box::new(get_condition(lex, "{")?),
-        body: get_body(lex)?,
+        body: get_body(lex, "}")?,
     })
 }
 
@@ -295,12 +297,12 @@ fn subprogram_flow(lex: &mut Lexer<Token>) -> Result<Function, ParseStop> {
     Ok(Function {
         path,
         args,
-        body: get_body(lex)?,
+        body: get_body(lex, "}")?,
     })
 }
 
 /// Gets condition which are multiple expression ending with a stray [Token::BraceRight] this consumes, based upon the [launch] function
-fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
+fn get_body(lex: &mut Lexer<Token>, stray: &str) -> Result<Vec<Expr>, ParseStop> {
     let mut buf = None;
     let mut output = vec![];
 
@@ -315,7 +317,7 @@ fn get_body(lex: &mut Lexer<Token>) -> Result<Vec<Expr>, ParseStop> {
 
                 buf = Some(expr);
             }
-            Err(ParseStop::UnexpectedTokenTop(d)) if &d == "}" => break,
+            Err(ParseStop::UnexpectedTokenTop(d)) if &d == stray => break,
             Err(unknown) => return Err(unknown),
         }
     }
@@ -660,7 +662,7 @@ mod tests {
     #[test]
     fn bodies() {
         assert_eq!(
-            get_body(&mut Token::lexer("\"hello\"}")),
+            get_body(&mut Token::lexer("\"hello\"}"), "}"),
             Ok(vec![Expr {
                 kind: StrLit("hello".to_string()).into(),
                 doc: None,
@@ -668,7 +670,7 @@ mod tests {
             }])
         );
         assert_eq!(
-            get_body(&mut Token::lexer("56    + 3298}")),
+            get_body(&mut Token::lexer("56    + 3298}"), "}"),
             Ok(vec![Expr {
                 kind: Op {
                     left: Box::new(Expr {

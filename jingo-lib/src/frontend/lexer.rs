@@ -52,6 +52,8 @@ pub enum Token {
     While,
     #[token("return")]
     Return,
+    #[token("break")]
+    Break,
     #[token("let")]
     Let,
     #[token("mut")]
@@ -272,6 +274,10 @@ mod tests {
     #[test]
     fn pathing() {
         // eq
+        assert_eq!(
+            Token::lexer("hello_world").next().unwrap(),
+            Token::Path(Path::new("hello_world"))
+        );
         assert_eq!(
             Token::lexer("c.c").next().unwrap(),
             Token::Path(Path {

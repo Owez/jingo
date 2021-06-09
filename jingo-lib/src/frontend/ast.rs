@@ -32,6 +32,7 @@ impl Expr {
 /// the AST to use, stemming from the central [Expr] structure
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind {
+    Body(Body),
     Not(Not),
     Op(Op),
     Path(Path),
@@ -50,7 +51,24 @@ pub enum ExprKind {
     StrLit(StrLit),
     CharLit(CharLit),
     BoolLit(BoolLit),
+    Break,
     None,
+}
+
+/// Body of `( <exprs> )` allowing expansion from a single expression to multiple
+#[derive(Debug, Clone, PartialEq)]
+pub struct Body(pub Vec<Expr>);
+
+impl From<Body> for ExprKind {
+    fn from(kind: Body) -> Self {
+        ExprKind::Body(kind)
+    }
+}
+
+impl From<Vec<Expr>> for ExprKind {
+    fn from(kind: Vec<Expr>) -> Self {
+        Body(kind).into()
+    }
 }
 
 /// Right-associative not symbol
@@ -236,7 +254,7 @@ impl From<FunctionCall> for ExprKind {
 /// Segment of [Match] which contains a branch
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchSegment {
-    /// Expression to match, if this is [None], it means this is the default
+    /// Expression to match
     pub condition: Box<Expr>,
 
     /// Multiple expression body to run if the match succeeds
@@ -256,7 +274,7 @@ pub struct Match {
     pub segments: Vec<MatchSegment>,
 
     /// Default expression to use if none matched
-    pub default: Option<Box<Expr>>
+    pub default: Option<Box<Expr>>,
 }
 
 impl From<Match> for ExprKind {
